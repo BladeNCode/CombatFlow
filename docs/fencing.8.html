@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Bout Timeline Viewer</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="data.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            /* Base Colors (RGB values) */
+            --primary-blue: 59, 130, 246;
+            --primary-orange: 239, 139, 68;
+            --neutral-gray: 156, 163, 175;
+            --highlight: 0, 145, 110;
+            /* 169,20,15 */
+            --text-primary: 37, 50, 55;
+            --text-secondary: 108, 143, 157;
+            --text-tertiary: 55, 65, 81;
+            --bg-primary: 255, 255, 255;
+            --bg-secondary: 248, 249, 250;
+            --bg-tertiary: 233, 236, 239;
+            --bg-quaternary: 249, 250, 251;
+            --border-light: 0, 0, 0;
+            --border-medium: 0, 0, 0;
+            --shadow-light: 0, 0, 0;
+            --shadow-medium: 0, 0, 0;
+
+            /* Team Colors */
+            --team1-primary: rgb(var(--primary-blue));
+            --team1-secondary: rgba(var(--primary-blue), 0.8);
+            --team1-light: rgba(var(--primary-blue), 0.2);
+            --team1-line: rgba(var(--primary-blue), 0.3);
+
+            --team2-primary: rgb(var(--primary-orange));
+            --team2-secondary: rgba(var(--primary-orange), 0.67);
+            --team2-light: rgba(var(--primary-orange), 0.3);
+            --team2-line: rgba(var(--primary-orange), 0.3);
+
+            /* Interactive States */
+            --highlight-color: rgba(var(--highlight), 1);
+            --highlight-gray: rgba(var(--neutral-gray), 0.3);
+            --highlight-gray-hover: rgba(var(--neutral-gray), 0.5);
+            --highlight-gray-dark: rgba(var(--neutral-gray), 0.7);
+            --match-start-bg: rgba(var(--neutral-gray), 0.2);
+            --match-start-bg-hover: rgba(var(--neutral-gray), 0.3);
+            --match-start-line: rgba(var(--neutral-gray), 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: rgb(var(--text-primary));
+            background: linear-gradient(135deg, rgb(var(--bg-secondary)) 0%, rgb(var(--bg-tertiary)) 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(var(--bg-primary), 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(var(--border-light), 0.05);
+            padding: 0.75rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-row {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            transition: top 0.3s ease;
+        }
+
+        .header-row.filters-hidden {
+            top: 0;
+        }
+
+        .header-row.filters-visible {
+            top: 45px;
+        }
+
+        .settings-container {
+            position: relative;
+        }
+
+        .settings-button {
+            background: none;
+            border: 1px solid rgba(var(--border-medium), 0.2);
+            border-radius: 6px;
+            padding: 0.5rem;
+            cursor: pointer;
+            color: rgb(var(--text-tertiary));
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-button:hover {
+            background: rgba(var(--highlight-gray), 0.1);
+            border-color: rgba(var(--border-medium), 0.4);
+        }
+
+        .settings-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.5rem;
+            background: rgba(var(--bg-primary), 0.98);
+            border: 1px solid rgba(var(--border-medium), 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            min-width: 240px;
+            box-shadow: 0 8px 24px rgba(var(--shadow-medium), 0.15);
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+        }
+
+        .settings-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .settings-item {
+            margin-bottom: 1rem;
+        }
+
+        .settings-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            color: rgb(var(--text-primary));
+            cursor: pointer;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(var(--neutral-gray), 0.3);
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(var(--shadow-light), 0.2);
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background-color: var(--highlight-color);
+        }
+
+        .toggle-switch input:checked+.toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .time-toggle-switch input+.toggle-slider {
+            background-color: var(--highlight-color);
+        }
+
+        .time-toggle-switch input:checked+.toggle-slider {
+            background-color: var(--highlight-color);
+        }
+
+        h1 {
+            font-weight: 300;
+            font-size: 1.75rem;
+            margin: 0.3rem;
+            color: rgba(var(--text-tertiary), 1);
+            text-align: left;
+        }
+
+        .container {
+            display: flex;
+            height: calc(100vh - 65px);
+            padding: 0;
+            gap: 0;
+        }
+
+        #chart-container {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            background: rgb(var(--bg-primary));
+            border-right: 1px solid rgba(var(--border-medium), 0.08);
+            position: relative;
+        }
+
+        #chart {
+            flex: 1;
+            padding: 0 1rem;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #main-chart {
+            flex: 0 0 85%;
+        }
+
+        #difference-chart {
+            flex: 0 0 15%;
+            border-top: 1px solid rgba(var(--border-medium), 0.08);
+        }
+
+        #table-container {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            background: rgb(var(--bg-primary));
+        }
+
+        .table-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            /* padding: 0 1rem 1rem; */
+        }
+
+        .table-wrapper::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-track {
+            background: rgba(var(--highlight-gray), 1);
+            border-radius: 4px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(var(--highlight-gray), 1);
+            border-radius: 4px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: rgba(var(--highlight-gray), 1);
+        }
+
+        #tooltip {
+            position: absolute;
+            padding: 0.3rem;
+            background: rgba(var(--bg-primary), 0.98);
+            border: 1px solid rgba(var(--border-medium), 0.08);
+            border-radius: 4px;
+            /* pointer-events: none; */
+            max-width: 180px;
+            box-shadow: 0 6px 18px rgba(var(--shadow-medium), 0.12);
+            font-size: 0.65rem;
+            line-height: 1.3;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            top: 0;
+            left: 40px;
+        }
+
+        #tooltip strong {
+            color: rgba(var(--text-tertiary), 0.9);
+            font-weight: 600;
+        }
+
+        .point {
+            cursor: pointer;
+            stroke-width: 1.5px;
+            stroke: rgba(var(--bg-secondary), 0.9);
+            transition: all 0.2s ease;
+            filter: drop-shadow(0 1px 2px rgba(var(--shadow-light), 0.1));
+        }
+
+        .point:hover,
+        .point-highlighted {
+            stroke-width: 3px;
+            stroke: var(--highlight-color);
+            transition: none;
+        }
+
+        .point-highlighted-fade {
+            stroke-width: 3px !important;
+            stroke: var(--highlight-color) !important;
+            transition: stroke-width 0.3s ease-out, stroke 0.3s ease-out !important;
+        }
+
+        .point-filtered {
+            opacity: 0.2;
+            transition: opacity 0.3s ease;
+        }
+
+        .fencer-change-area-filtered {
+            opacity: 0.2;
+            transition: opacity 0.3s ease;
+        }
+
+        .team1-point {
+            fill: var(--team1-secondary);
+        }
+
+        .team2-point {
+            fill: var(--team2-secondary);
+        }
+
+        .match-start-line {
+            stroke: var(--match-start-line);
+            stroke-width: 3px;
+            stroke-dasharray: 5, 5;
+            /* cursor: pointer; */
+        }
+
+        .fencer-change-area {
+            fill: var(--highlight-gray);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .fencer-change-area:hover {
+            fill: var(--highlight-gray-hover);
+        }
+
+        .fencer-change-area-highlighted {
+            fill: var(--highlight-gray-dark);
+        }
+
+        .fencer-change-area-fade {
+            fill: var(--highlight-gray);
+            transition: fill 4s ease-out;
+        }
+
+        .line {
+            stroke-width: 3px;
+            fill: none;
+            filter: drop-shadow(0 1px 2px rgba(var(--shadow-light), 0.1));
+        }
+
+        .team1-line {
+            stroke: var(--team1-line);
+        }
+
+        .team2-line {
+            stroke: var(--team2-line);
+        }
+
+        .difference-line {
+            stroke-width: 2px;
+            fill: none;
+        }
+
+        .difference-area {
+            fill-opacity: 0.3;
+        }
+
+        .team1-difference {
+            stroke: var(--team1-line);
+            fill: var(--team1-line);
+        }
+
+        .team2-difference {
+            stroke: var(--team2-line);
+            fill: var(--team2-line);
+        }
+
+        .axis text {
+            font-size: 0.75rem;
+            fill: rgb(var(--text-secondary));
+            font-weight: 500;
+        }
+
+        .axis path,
+        .axis line {
+            stroke: var(--highlight-gray-hover);
+            stroke-width: 1;
+        }
+
+        .axis-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            fill: rgb(var(--text-tertiary));
+        }
+
+        .grid .domain {
+            display: none;
+        }
+
+        a {
+            color: rgb(var(--primary-blue));
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: #1d4ed8;
+            text-decoration: underline;
+        }
+
+        .legend {
+            background: rgba(var(--bg-primary), 0.95);
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid rgba(var(--border-medium), 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            border: 2px solid rgba(var(--bg-primary), 0.9);
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.875rem;
+            background: rgb(var(--bg-primary));
+        }
+
+        th,
+        td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(var(--border-light), 0.05);
+        }
+
+        th {
+            font-weight: 600;
+            color: rgb(var(--text-secondary));
+            background: rgb(var(--bg-quaternary));
+            position: sticky;
+            top: 0px;
+            z-index: 10;
+            border-bottom: 2px solid rgba(var(--border-medium), 0.08);
+        }
+
+        tr {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        tr:hover {
+            background-color: rgba(var(--primary-blue), 0.02);
+        }
+
+        .fencer-change-row {
+            background-color: rgba(var(--neutral-gray), 0.4);
+        }
+
+        .fencer-change-row:hover {
+            background-color: rgba(var(--neutral-gray), 0.5);
+        }
+
+        .match-start-row {
+            background-color: var(--match-start-bg);
+        }
+
+        .match-start-row:hover {
+            background-color: var(--match-start-bg-hover);
+        }
+
+        .point-winner {
+            font-weight: bold;
+        }
+
+        .row-highlight-team1 {
+            background-color: var(--team1-light) !important;
+        }
+
+        .row-highlight-team2 {
+            background-color: var(--team2-light) !important;
+        }
+
+        .row-highlight-neutral {
+            background-color: var(--highlight-gray) !important;
+        }
+
+        .row-fade-transition {
+            transition: background-color 2s ease-out !important;
+        }
+
+        .filter-row {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgb(var(--bg-quaternary));
+            transition: transform 0.3s ease;
+            transform: translateY(0);
+            border-bottom: 1px solid rgba(var(--border-medium), 0.08);
+        }
+
+        .filter-row.hidden {
+            transform: translateY(-100%);
+            border-bottom: none;
+        }
+
+        .filter-indicator {
+            position: absolute;
+            top: 50%;
+            left: 2px;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            background: var(--highlight-color);
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            cursor: pointer;
+            z-index: 25;
+        }
+
+        .filter-indicator.show {
+            opacity: 1;
+        }
+
+        .filter-indicator:hover {
+            background: rgba(var(--highlight), 0.8);
+            transform: translateY(-50%) scale(1.2);
+        }
+
+        .filter-row input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid rgba(var(--border-medium), 0.2);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            background: rgb(var(--bg-primary));
+            color: rgb(var(--text-primary));
+            box-sizing: border-box;
+        }
+
+        .filter-row input:focus {
+            outline: none;
+            border-color: var(--highlight-color);
+            box-shadow: 0 0 0 2px rgba(var(--highlight), 0.1);
+        }
+
+        .filter-row th {
+            padding: 0.5rem 0.75rem;
+            background: rgb(var(--bg-quaternary));
+            border-bottom: 1px solid rgba(var(--border-medium), 0.08);
+        }
+
+        /* Mobile styles */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: calc(100vh - 140px);
+            }
+
+            #chart-container {
+                flex: 0 0 40%;
+                border-right: none;
+                border-bottom: 1px solid rgba(var(--border-medium), 0.08);
+                position: sticky;
+                top: 0;
+                z-index: 50;
+                background: rgb(var(--bg-primary));
+            }
+
+            #chart {
+                padding: 0 0.5rem;
+            }
+
+            #table-container {
+                flex: 1;
+                min-height: 60vh;
+            }
+
+            .table-wrapper {
+                /* padding: 0 1rem; */
+                height: 100%;
+                overflow-y: auto;
+            }
+
+            .header {
+                padding: 0.2rem;
+            }
+
+            h1 {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1 id="match-title"></h1>
+        <div class="settings-container">
+            <button class="settings-button" id="settings-button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="4" y1="9" x2="20" y2="9"></line>
+                    <line x1="4" y1="15" x2="20" y2="15"></line>
+                    <circle cx="8" cy="9" r="2"></circle>
+                    <circle cx="16" cy="15" r="2"></circle>
+                </svg>
+            </button>
+            <div class="settings-dropdown" id="settings-dropdown">
+                <div class="settings-item">
+                    <label class="toggle-label">
+                        <span>Match Time</span>
+                        <div class="toggle-switch time-toggle-switch">
+                            <input type="checkbox" id="time-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </div>
+                        <span>Bout Time</span>
+                    </label>
+                </div>
+                <div class="settings-item">
+                    <label class="toggle-label">
+                        <span>Point Difference</span>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="diff-toggle">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="chart-container">
+            <div id="chart">
+                <div id="main-chart"></div>
+                <div id="difference-chart"></div>
+            </div>
+            <div id="tooltip"></div>
+        </div>
+
+        <div id="table-container">
+            <div class="table-wrapper">
+                <table id="score-table">
+                    <thead>
+                        <tr class="filter-row">
+                            <th><input type="text" id="filter-time" placeholder="Filter time..."></th>
+                            <th><input type="text" id="filter-team1" placeholder="Filter player..."></th>
+                            <th><input type="text" id="filter-score1" placeholder="Score..."></th>
+                            <th><input type="text" id="filter-score2" placeholder="Score..."></th>
+                            <th><input type="text" id="filter-team2" placeholder="Filter player..."></th>
+                            <th><input type="text" id="filter-type" placeholder="Filter type..."></th>
+                            <th><input type="text" id="filter-action" placeholder="Filter action..."></th>
+                        </tr>
+                        <tr class="header-row">
+                            <th><span class="filter-indicator" id="filter-indicator-time"></span>Time</th>
+                            <th><span class="filter-indicator" id="filter-indicator-team1"></span><span
+                                    id="team1-header"></span></th>
+                            <th colspan="2" style="text-align: center;"><span class="filter-indicator" id="filter-indicator-score"></span>Score</th>
+                            <th><span class="filter-indicator" id="filter-indicator-team2"></span><span
+                                    id="team2-header"></span></th>
+                            <th><span class="filter-indicator" id="filter-indicator-type"></span>Type</th>
+                            <th><span class="filter-indicator" id="filter-indicator-action"></span>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize page elements with team names
+        function initializePageElements() {
+            document.getElementById('match-title').textContent = `${TEAMS.title}`;
+            document.getElementById('team1-header').textContent = `${TEAMS.team1.code} Player`;
+            document.getElementById('team2-header').textContent = `${TEAMS.team2.code} Player`;
+        }
+
+        // Get match start time from data
+        function getMatchStartTime() {
+            const matchStartEntry = matchData.find(d => d.isMatchStart);
+            return matchStartEntry ? matchStartEntry.time : '1:24:33';
+        }
+
+        // Convert timestamp to minutes from match start
+        function timeToMinutes(timeStr) {
+            const [h, m, s] = timeStr.split(':').map(Number);
+            const totalSeconds = h * 3600 + m * 60 + s;
+
+            const matchStartTime = getMatchStartTime();
+            const [startH, startM, startS] = matchStartTime.split(':').map(Number);
+            const startTotalSeconds = startH * 3600 + startM * 60 + startS;
+
+            return (totalSeconds - startTotalSeconds) / 60;
+        }
+
+        // Format relative time for display
+        function formatRelativeTime(minutes) {
+            return Math.round(minutes).toString();
+        }
+
+        // Format relative time for table display (full format)
+        function formatRelativeTimeTable(minutes) {
+            const totalSeconds = Math.round(minutes * 60);
+            const mins = Math.floor(totalSeconds / 60);
+            const secs = totalSeconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function calculateElapsedBoutTime(bout, boutTime) {
+            const totalBoutSeconds = bout * 3 * 60; // bout number * 3 minutes * 60 seconds
+            const [minutes, seconds] = boutTime.split(':').map(Number);
+            const remainingSeconds = minutes * 60 + seconds;
+            const elapsedSeconds = totalBoutSeconds - remainingSeconds;
+
+            const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+            const elapsedSecondsRemainder = elapsedSeconds % 60;
+            return `${elapsedMinutes}:${elapsedSecondsRemainder.toString().padStart(2, '0')}`;
+        }
+
+        // Determine point winners
+        function determineWinners(data) {
+            for (let i = 1; i < data.length; i++) {
+                const prev = data[i - 1];
+                const curr = data[i];
+
+                curr.team1Won = curr.team1Score > prev.team1Score;
+                curr.team2Won = curr.team2Score > prev.team2Score;
+            }
+        }
+
+        // Process data
+        const plotData = matchData.filter(d => !d.isFencerChange);
+        const fencerChanges = matchData.filter(d => d.isFencerChange);
+        const matchStart = matchData.find(d => d.isMatchStart);
+
+        // Determine winners for all data
+        determineWinners(matchData);
+
+        // Determine final winner for difference calculation
+        const finalPoint = plotData[plotData.length - 1];
+        const team1IsWinner = finalPoint.team1Score > finalPoint.team2Score;
+
+        // Dynamic sizing based on container
+        function initChart() {
+            const chartContainer = document.getElementById('chart');
+            const mainChartContainer = document.getElementById('main-chart');
+            const differenceChartContainer = document.getElementById('difference-chart');
+
+            const containerRect = chartContainer.getBoundingClientRect();
+
+            const margin = { top: 0, right: 25, bottom: 30, left: 25 };
+            const totalWidth = containerRect.width - margin.left - margin.right;
+            const totalHeight = containerRect.height;
+
+            // Check if difference chart is enabled
+            const isDiffEnabled = document.getElementById('diff-toggle').checked;
+
+            let mainChartHeight, differenceChartHeight;
+            if (isDiffEnabled) {
+                mainChartHeight = totalHeight * 0.85 - margin.top - margin.bottom;
+                differenceChartHeight = totalHeight * 0.15 - 10; // 10px for border
+            } else {
+                mainChartHeight = totalHeight - margin.top - margin.bottom;
+                differenceChartHeight = 0;
+            }
+
+            // Clear existing charts
+            d3.select('#main-chart svg').remove();
+            d3.select('#difference-chart svg').remove();
+
+            // Hide/show difference chart container
+            differenceChartContainer.style.display = isDiffEnabled ? 'block' : 'none';
+
+            // Create main chart SVG
+            const mainSvg = d3.select('#main-chart')
+                .append('svg')
+                .attr('width', totalWidth + margin.left + margin.right)
+                .attr('height', mainChartHeight + margin.top + margin.bottom)
+                .append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            // Create difference chart SVG only if enabled
+            let diffSvg;
+            if (isDiffEnabled) {
+                diffSvg = d3.select('#difference-chart')
+                    .append('svg')
+                    .attr('width', totalWidth + margin.left + margin.right)
+                    .attr('height', differenceChartHeight)
+                    .append('g')
+                    .attr('transform', `translate(${margin.left},0)`);
+            }
+            // Tooltip
+            const tooltip = d3.select('#tooltip');
+
+            // Scales
+            const x = d3.scaleLinear()
+                .domain([0, timeToMinutes('2:25:30')])
+                .range([0, totalWidth]);
+
+            const y = d3.scaleLinear()
+                .domain([0, Math.max(6, d3.max(plotData, d => Math.max(d.team1Score, d.team2Score))) + 1])
+                .range([mainChartHeight, 0]);
+
+            // Difference chart Y scale
+            const posMaxDiff = d3.max(plotData, d => d.team1Score - d.team2Score > 0 ? Math.abs(d.team1Score - d.team2Score) : 0);
+            const negMaxDiff = d3.max(plotData, d => d.team1Score - d.team2Score < 0 ? Math.abs(d.team1Score - d.team2Score) : 0);
+            const yDiff = d3.scaleLinear()
+                .domain([Math.min(-posMaxDiff, -1), Math.max(negMaxDiff, 1)])
+                .range([differenceChartHeight - 1, 1]);
+
+            // Add grid lines to main chart
+            mainSvg.append('g')
+                .attr('class', 'grid')
+                .attr('transform', `translate(0,${mainChartHeight})`)
+                .call(d3.axisBottom(x)
+                    .tickFormat('')
+                )
+                .selectAll('line')
+                .style('stroke', `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--border-light')}, 0.05)`)
+                .style('stroke-width', 1);
+
+            mainSvg.append('g')
+                .attr('class', 'grid')
+                .call(d3.axisLeft(y)
+                    .tickSize(-totalWidth)
+                    .tickFormat('')
+                )
+                .selectAll('line')
+                .style('stroke', `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--border-light')}, 0.05)`)
+                .style('stroke-width', 1);
+
+            // Main chart axes
+            mainSvg.append('g')
+                .attr('class', 'axis')
+                .attr('transform', `translate(0,${mainChartHeight})`)
+                .call(d3.axisBottom(x).tickFormat(d => formatRelativeTime(d)));
+
+            mainSvg.append('g')
+                .attr('class', 'axis')
+                .call(d3.axisLeft(y));
+
+            // Add match start line to main chart
+            mainSvg.append('line')
+                .attr('class', 'match-start-line')
+                .attr('x1', x(0))
+                .attr('x2', x(0))
+                .attr('y1', 0)
+                .attr('y2', mainChartHeight)
+                .on('mouseover', () => {
+                    tooltip.html(`
+                    <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(0)}</strong></div>
+                    <div><strong>${TEAMS.team1.name}:</strong> ${matchStart.team1Score} (${matchStart.team1Player})</div>
+                    <div><strong>${TEAMS.team2.name}:</strong> ${matchStart.team2Score} (${matchStart.team2Player})</div>
+                    <div style="margin-top:8px;font-style:italic">${matchStart.action}</div>
+                `).style('opacity', 1);
+                })
+                .on('mouseout', () => tooltip.style('opacity', 0));
+
+            // Add match start line to difference chart only if enabled
+            if (isDiffEnabled && diffSvg) {
+                diffSvg.append('line')
+                    .attr('class', 'match-start-line')
+                    .attr('x1', x(0))
+                    .attr('x2', x(0))
+                    .attr('y1', 0)
+                    .attr('y2', differenceChartHeight);
+            }
+
+            // Add fencer change areas to main chart
+            mainSvg.selectAll('.fencer-change-area')
+                .data(fencerChanges)
+                .enter().append('rect')
+                .attr('class', 'fencer-change-area')
+                .attr('x', d => x(timeToMinutes(d.time)))
+                .attr('width', d => x(d.changeDuration))
+                .attr('y', 0)
+                .attr('height', mainChartHeight)
+                .on('mouseover', (event, d) => {
+                    tooltip.html(`
+                    <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(timeToMinutes(d.time))}</strong></div>
+                    <div><strong>Bout End</strong></div>
+                    <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player}: +${d.team1PlayerScore})</div>
+                    <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player}: +${d.team2PlayerScore})</div>
+                    <div style="margin-top:8px;font-style:italic">${d.action}</div>
+                `).style('opacity', 1);
+                })
+                .on('mouseout', () => tooltip.style('opacity', 0))
+                .on('click', (event, d) => {
+                    highlightTableRow(d);
+                });
+
+            // Add fencer change areas to difference chart only if enabled
+            if (isDiffEnabled && diffSvg) {
+                diffSvg.selectAll('.fencer-change-area')
+                    .data(fencerChanges)
+                    .enter().append('rect')
+                    .attr('class', 'fencer-change-area')
+                    .attr('x', d => x(timeToMinutes(d.time)))
+                    .attr('width', d => x(d.changeDuration))
+                    .attr('y', 0)
+                    .attr('height', differenceChartHeight)
+                    .on('click', (event, d) => {
+                        highlightTableRow(d);
+                    });
+            }
+
+            // Find the final match point and loser's final score
+            const finalPoint = plotData[plotData.length - 1];
+
+            // Create modified data for lines - extend loser's line to winner's final point
+            const team1LineData = [...plotData];
+            const team2LineData = [...plotData];
+
+            // Add final point for loser at winner's time
+            if (finalPoint.team1Score < finalPoint.team2Score) {
+                // Team 2 won, extend team 1 line
+                team1LineData.push({
+                    ...finalPoint,
+                    team1Score: finalPoint.team1Score // Keep loser's score same
+                });
+            } else {
+                // Team 1 won, extend team 2 line  
+                team2LineData.push({
+                    ...finalPoint,
+                    team2Score: finalPoint.team2Score // Keep loser's score same
+                });
+            }
+
+            // Add lines between points to main chart
+            mainSvg.append('path')
+                .datum(team1LineData)
+                .attr('class', 'line team1-line')
+                .attr('d', d3.line()
+                    .x(d => x(timeToMinutes(d.time)))
+                    .y(d => y(d.team1Score))
+                    .curve(d3.curveStepAfter)
+                );
+
+            mainSvg.append('path')
+                .datum(team2LineData)
+                .attr('class', 'line team2-line')
+                .attr('d', d3.line()
+                    .x(d => x(timeToMinutes(d.time)))
+                    .y(d => y(d.team2Score))
+                    .curve(d3.curveStepAfter)
+                );
+
+            // Add difference chart elements only if enabled
+            if (isDiffEnabled && diffSvg) {
+                // Add zero line to difference chart
+                diffSvg.append('line')
+                    .attr('x1', 0)
+                    .attr('x2', totalWidth)
+                    .attr('y1', yDiff(0))
+                    .attr('y2', yDiff(0))
+                    .style('stroke', `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--border-light')}, 0.2)`)
+                    .style('stroke-width', 1);
+
+                // Create difference data
+                const differenceData = plotData.map(d => {
+                    const rawDifference = team1IsWinner ?
+                        (d.team1Score - d.team2Score) :
+                        (d.team2Score - d.team1Score);
+                    return {
+                        ...d,
+                        winnerAdvantage: Math.max(0, rawDifference),
+                        loserAdvantage: Math.max(0, -rawDifference),
+                        absoluteDifference: Math.abs(d.team1Score - d.team2Score)
+                    };
+                });
+
+                // Add difference area
+                const areaPositive = d3.area()
+                    .x(d => x(timeToMinutes(d.time)))
+                    .y0(yDiff(0))
+                    .y1(d => yDiff(d.winnerAdvantage))
+                    .curve(d3.curveStepAfter);
+
+                const areaNegative = d3.area()
+                    .x(d => x(timeToMinutes(d.time)))
+                    .y0(yDiff(0))
+                    .y1(d => yDiff(-d.loserAdvantage))
+                    .curve(d3.curveStepAfter);
+
+                // Add winner advantage area (positive)
+                diffSvg.append('path')
+                    .datum(differenceData)
+                    .attr('class', `difference-area ${team1IsWinner ? 'team1-difference' : 'team2-difference'}`)
+                    .attr('d', areaPositive);
+
+                // Add loser advantage area (negative)
+                diffSvg.append('path')
+                    .datum(differenceData)
+                    .attr('class', `difference-area ${team1IsWinner ? 'team2-difference' : 'team1-difference'}`)
+                    .attr('d', areaNegative);
+
+                diffSvg.on('mousemove', (event) => {
+                    const [mouseX] = d3.pointer(event);
+                    const timeValue = x.invert(mouseX);
+
+                    // Find closest data point
+                    const bisect = d3.bisector(d => timeToMinutes(d.time)).left;
+                    const index = bisect(differenceData, timeValue);
+                    const d0 = differenceData[index - 1];
+                    const d1 = differenceData[index];
+                    const d = d1 && (timeValue - timeToMinutes(d0.time) > timeToMinutes(d1.time) - timeValue) ? d1 : d0;
+
+                    tooltip.html(`
+            <div style="text-align: center; max-width: 10px; font-size: 0.7rem; font-weight: 400;">
+                ${d.absoluteDifference}
+            </div>
+        `)
+                        .style('left', (event.pageX) + 'px')
+                        .style('top', (event.pageY - 90) + 'px')
+                        .style('opacity', 1);
+                })
+                    .on('mouseout', () => {
+                        tooltip.style('opacity', 0);
+                    });
+            }
+
+            // Handle hover reset for main chart
+            mainSvg.on('mouseover', () => {
+                tooltip.style('left', '40px').style('top', '0px');
+            });
+
+            // Add points only when score changes to main chart
+            const scoreChangesTeam1 = plotData.filter((d, i) => d.team1Score > 0 && (i === 0 || d.team1Score !== plotData[i - 1].team1Score));
+            const scoreChangesTeam2 = plotData.filter((d, i) => d.team2Score > 0 && (i === 0 || d.team2Score !== plotData[i - 1].team2Score));
+
+            // Add points for Team 1 scores
+            mainSvg.selectAll('.team1-point')
+                .data(scoreChangesTeam1)
+                .enter().append('rect')
+                .attr('class', 'point team1-point')
+                .attr('x', d => x(timeToMinutes(d.time)) - 2.5)
+                .attr('y', d => y(d.team1Score) - 4)
+                .attr('width', 6)
+                .attr('height', 9)
+                .attr('rx', 2)
+                .on('mouseover', (event, d) => {
+                    tooltip.html(`
+                    <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(timeToMinutes(d.time))}</strong></div>
+                    <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player})</div>
+                    <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player})</div>
+                    <div style="margin-top:8px;font-style:italic">${d.action}</div>
+                `).style('opacity', 1);
+
+                    // If it's a double touch (DT), apply hover styles to the corresponding opposing team point
+                    if (d.type === 'DT') {
+                        d3.selectAll('.team2-point')
+                            .filter(point => point.time === d.time)
+                            .classed('point-highlighted', true);
+                    }
+                })
+                .on('mouseout', (event, d) => {
+                    tooltip.style('opacity', 0);
+
+                    // If it's a double touch, reset the opposing team point
+                    if (d.type === 'DT') {
+                        d3.selectAll('.team2-point')
+                            .filter(point => point.time === d.time)
+                            .classed('point-highlighted', false);
+                    }
+                })
+                .on('click', (event, d) => {
+                    highlightTableRow(d);
+                });
+
+            // Add points for Team 2 scores
+            mainSvg.selectAll('.team2-point')
+                .data(scoreChangesTeam2)
+                .enter().append('rect')
+                .attr('class', 'point team2-point')
+                .attr('x', d => x(timeToMinutes(d.time)) - 2.5)
+                .attr('y', d => y(d.team2Score) - 4)
+                .attr('width', 6)
+                .attr('height', 9)
+                .attr('rx', 2)
+                .on('mouseover', (event, d) => {
+                    tooltip.html(`
+                    <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(timeToMinutes(d.time))}</strong></div>
+                    <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player})</div>
+                    <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player})</div>
+                    <div style="margin-top:8px;font-style:italic">${d.action}</div>
+                `).style('opacity', 1);
+
+                    // If it's a double touch (DT), apply hover styles to the corresponding opposing team point
+                    if (d.type === 'DT') {
+                        d3.selectAll('.team1-point')
+                            .filter(point => point.time === d.time)
+                            .classed('point-highlighted', true);
+                    }
+                })
+                .on('mouseout', (event, d) => {
+                    tooltip.style('opacity', 0);
+
+                    // If it's a double touch, reset the opposing team point
+                    if (d.type === 'DT') {
+                        d3.selectAll('.team1-point')
+                            .filter(point => point.time === d.time)
+                            .classed('point-highlighted', false);
+                    }
+                })
+                .on('click', (event, d) => {
+                    highlightTableRow(d);
+                });
+
+            // Add legend
+            const legend = mainSvg.append('g')
+                .attr('class', 'legend')
+                .attr('transform', `translate(${totalWidth - 100}, ${totalHeight - differenceChartHeight - 80})`);
+
+            const legendItems = [
+                { color: `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--primary-blue')}, 1)`, label: TEAMS.team1.name },
+                { color: `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--primary-orange')}, 1)`, label: TEAMS.team2.name }
+            ];
+
+            legendItems.forEach((item, i) => {
+                const legendItem = legend.append('g')
+                    .attr('class', 'legend-item')
+                    .attr('transform', `translate(0, ${i * 20})`);
+
+                legendItem.append('circle')
+                    .attr('class', 'legend-dot')
+                    .attr('r', 4)
+                    .attr('fill', item.color);
+
+                legendItem.append('text')
+                    .attr('x', 15)
+                    .attr('dy', '0.35em')
+                    .text(item.label);
+            });
+        }
+
+        // Function to highlight table row and scroll to it
+        function highlightTableRow(d) {
+            const tableRows = document.querySelectorAll('#score-table tbody tr');
+            const matchingRow = Array.from(tableRows).find(row => {
+                const videoTimeCell = row.querySelector('td:first-child a');
+                if (!videoTimeCell) return false;
+
+                // Extract the original time from the link text (after "▶: ")
+                const linkText = videoTimeCell.textContent;
+                const originalTime = linkText.replace('▶: ', '');
+                return originalTime === d.time;
+            });
+
+            if (matchingRow) {
+                // Temporarily show the row if it's hidden by filters
+                const wasHidden = matchingRow.style.display === 'none';
+                if (wasHidden) {
+                    matchingRow.style.display = '';
+                }
+
+                matchingRow.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+
+                // Remove any existing highlight classes
+                matchingRow.classList.remove('row-highlight-team1', 'row-highlight-team2', 'row-highlight-neutral', 'row-fade-transition');
+
+                // Determine highlight class
+                let highlightClass;
+                if (d.type === 'DT') {
+                    highlightClass = 'row-highlight-neutral';
+                } else if (d.team1Won) {
+                    highlightClass = 'row-highlight-team1';
+                } else if (d.team2Won) {
+                    highlightClass = 'row-highlight-team2';
+                } else {
+                    highlightClass = 'row-highlight-neutral';
+                }
+
+                // Apply highlight
+                matchingRow.classList.add(highlightClass);
+
+                // Fade out over time
+                setTimeout(() => {
+                    matchingRow.classList.add('row-fade-transition');
+                    matchingRow.classList.remove(highlightClass);
+                }, 100);
+
+                // Clean up classes after transition
+                setTimeout(() => {
+                    matchingRow.classList.remove('row-fade-transition');
+                    if (wasHidden) {
+                        matchingRow.style.display = 'none';
+                    }
+                }, 2100);
+            }
+        }
+
+        // Function to highlight chart point
+        function highlightChartPoint(d) {
+            if (d.isFencerChange) {
+                // Find and highlight the corresponding fencer change rectangle
+                const allRectangles = d3.selectAll('.fencer-change-area');
+
+                // Find the matching rectangle based on time
+                const matchingRectangles = allRectangles.filter(function () {
+                    const rectData = d3.select(this).datum();
+                    return rectData && rectData.time === d.time;
+                });
+
+                matchingRectangles.classed('fencer-change-area-highlighted', true);
+
+                // Fade out over time
+                setTimeout(() => {
+                    matchingRectangles.classed('fencer-change-area-fade', true);
+                }, 100);
+
+                // Clean up classes after transition
+                setTimeout(() => {
+                    matchingRectangles.classed('fencer-change-area-highlighted', false)
+                        .classed('fencer-change-area-fade', false);
+                }, 4100);
+
+            } else {
+                // Find and highlight the corresponding chart point
+                const allPoints = d3.selectAll('.point');
+
+                // Find the matching point based on time and score
+                const matchingPoints = allPoints.filter(function () {
+                    const pointData = d3.select(this).datum();
+                    return pointData && pointData.time === d.time;
+                });
+
+                // Apply immediate highlight
+                matchingPoints.classed('point-highlighted', true);
+
+                // Add transition for fade-out only, then fade out
+                setTimeout(() => {
+                    matchingPoints
+                        .classed('point-highlighted', false)
+                        .classed('point-highlighted-fade', true);
+
+                    setTimeout(() => {
+                        matchingPoints.classed('point-highlighted-fade', false);
+                    }, 600);
+                }, 100);
+            }
+        }
+
+        // Initialize page elements
+        initializePageElements();
+
+        function applyFilters() {
+            const filters = {
+                time: document.getElementById('filter-time').value.toLowerCase(),
+                team1: document.getElementById('filter-team1').value.toLowerCase(),
+                score1: document.getElementById('filter-score1').value.toLowerCase(),
+                score2: document.getElementById('filter-score2').value.toLowerCase(),
+                team2: document.getElementById('filter-team2').value.toLowerCase(),
+                type: document.getElementById('filter-type').value.toLowerCase(),
+                action: document.getElementById('filter-action').value.toLowerCase()
+            };
+
+            const tableRows = document.querySelectorAll('#score-table tbody tr');
+            const visibleDataTimes = new Set();
+            const hasActiveFilters = Object.values(filters).some(filter => filter !== '');
+
+            tableRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length < 6) return;
+
+                const timeText = cells[0].textContent.toLowerCase();
+                const team1Text = cells[1].textContent.toLowerCase();
+                const score1Text = cells[2].textContent.toLowerCase();
+                const score2Text = cells[3].textContent.toLowerCase();
+                const team2Text = cells[4].textContent.toLowerCase();
+                const typeText = cells[5].textContent.toLowerCase();
+                const actionText = cells[6].textContent.toLowerCase();
+
+                const matches =
+                    (!filters.time || timeText.includes(filters.time)) &&
+                    (!filters.team1 || team1Text.includes(filters.team1)) &&
+                    (!filters.score1 || score1Text.includes(filters.score1)) &&
+                    (!filters.score2 || score2Text.includes(filters.score2)) &&
+                    (!filters.team2 || team2Text.includes(filters.team2)) &&
+                    (!filters.type || typeText.includes(filters.type)) &&
+                    (!filters.action || actionText.includes(filters.action));
+
+                row.style.display = matches ? '' : 'none';
+                if (matches) {
+                    const linkElement = cells[0].querySelector('a');
+                    if (linkElement) {
+                        const originalTime = linkElement.textContent.replace('▶: ', '');
+                        visibleDataTimes.add(originalTime);
+                    }
+                }
+            });
+            updateChartPointVisibility(visibleDataTimes, hasActiveFilters);
+        }
+
+        function updateChartPointVisibility(visibleDataTimes, hasActiveFilters) {
+            if (!hasActiveFilters) {
+                // Remove all filter classes when no filters are active
+                d3.selectAll('.point').classed('point-filtered', false);
+                d3.selectAll('.fencer-change-area').classed('fencer-change-area-filtered', false);
+                d3.selectAll('.match-start-line').classed('match-start-line-filtered', false);
+                return;
+            }
+
+            // Handle regular points
+            d3.selectAll('.point').classed('point-filtered', function () {
+                const pointData = d3.select(this).datum();
+                return pointData && !visibleDataTimes.has(pointData.time);
+            });
+
+            // Handle fencer change areas
+            d3.selectAll('.fencer-change-area').classed('fencer-change-area-filtered', function () {
+                const areaData = d3.select(this).datum();
+                return areaData && !visibleDataTimes.has(areaData.time);
+            });
+
+            // Handle match start line
+            d3.selectAll('.match-start-line').classed('match-start-line-filtered', function () {
+                const matchStartTime = getMatchStartTime();
+                return !visibleDataTimes.has(matchStartTime);
+            });
+        }
+
+        // Create table
+        const table = d3.select('#score-table tbody');
+
+        matchData.forEach(d => {
+            const row = table.append('tr');
+            if (d.isFencerChange) {
+                row.attr('class', 'fencer-change-row');
+            } else if (d.isMatchStart) {
+                row.attr('class', 'match-start-row');
+            }
+
+            // Add click handler to table row (but not the link)
+            row.on('click', function (event) {
+                // Don't trigger if clicking on the link
+                if (event.target.tagName !== 'A') {
+                    highlightChartPoint(d);
+
+                    // Highlight this table row with feedback
+                    const currentRow = this;
+
+                    // Remove any existing highlight classes
+                    currentRow.classList.remove('row-highlight-team1', 'row-highlight-team2', 'row-highlight-neutral', 'row-fade-transition');
+
+                    // Determine highlight class
+                    let highlightClass;
+                    if (d.type === 'DT') {
+                        highlightClass = 'row-highlight-neutral';
+                    } else if (d.team1Won) {
+                        highlightClass = 'row-highlight-team1';
+                    } else if (d.team2Won) {
+                        highlightClass = 'row-highlight-team2';
+                    } else {
+                        highlightClass = 'row-highlight-neutral';
+                    }
+
+                    // Apply highlight
+                    currentRow.classList.add(highlightClass);
+
+                    // Fade out over time
+                    setTimeout(() => {
+                        currentRow.classList.add('row-fade-transition');
+                        currentRow.classList.remove(highlightClass);
+                    }, 100);
+
+                    // Clean up classes after transition
+                    setTimeout(() => {
+                        currentRow.classList.remove('row-fade-transition');
+                    }, 2100);
+                }
+            });
+
+            const timeCell = row.append('td');
+            timeCell.append('span').text('BT: ' + calculateElapsedBoutTime(d.bout, d.boutTime)); // Add bout time here d.bout * 3mins - d.boutTime
+            timeCell.append('br');
+            timeCell.append('span').text('MT: ' + formatRelativeTimeTable(timeToMinutes(d.time)));
+            timeCell.append('br');
+            timeCell.append('a')
+                .attr('href', `https://youtu.be/IpekOpvrhqE?t=${d.linkTime.split(':').reduce((acc, time) => (60 * acc) + +time)}`)
+                .attr('target', '_blank')
+                .text('▶: ' + d.time);
+
+            // Team 1 Player - bold if they won the point
+            const team1PlayerCell = row.append('td');
+            if (d.team1Won) {
+                team1PlayerCell.attr('class', 'point-winner');
+            }
+            team1PlayerCell.text(d.team1Player);
+
+            // Team 1 Score - bold if they won the point
+            const team1ScoreCell = row.append('td');
+            if (d.team1Won) {
+                team1ScoreCell.attr('class', 'point-winner');
+            }
+            team1ScoreCell.text(d.team1Score);
+
+            // Team 2 Score - bold if they won the point
+            const team2ScoreCell = row.append('td');
+            if (d.team2Won) {
+                team2ScoreCell.attr('class', 'point-winner');
+            }
+            team2ScoreCell.text(d.team2Score);
+
+            // Team 2 Player - bold if they won the point
+            const team2PlayerCell = row.append('td');
+            if (d.team2Won) {
+                team2PlayerCell.attr('class', 'point-winner');
+            }
+            team2PlayerCell.text(d.team2Player);
+
+            row.append('td').text(d.type);
+
+            row.append('td').text(d.action);
+        });
+
+        let lastScrollTop = 0;
+        const tableWrapper = document.querySelector('.table-wrapper');
+        const filterRow = document.querySelector('.filter-row');
+
+        function hasActiveFilters() {
+            const filters = [
+                'filter-time', 'filter-team1', 'filter-score1',
+                'filter-score2', 'filter-team2', 'filter-type', 'filter-action'
+            ];
+            return filters.some(id => document.getElementById(id).value.trim() !== '');
+        }
+
+        function updateFilterIndicator() {
+            const filters = [
+                { id: 'filter-time', indicator: 'filter-indicator-time' },
+                { id: 'filter-team1', indicator: 'filter-indicator-team1' },
+                { id: 'filter-score1', indicator: 'filter-indicator-score' },
+                { id: 'filter-score2', indicator: 'filter-indicator-score' },
+                { id: 'filter-team2', indicator: 'filter-indicator-team2' },
+                { id: 'filter-type', indicator: 'filter-indicator-type' },
+                { id: 'filter-action', indicator: 'filter-indicator-action' }
+            ];
+
+            // Group filters by indicator to handle multiple filters per indicator
+            const indicatorGroups = {};
+            filters.forEach(filter => {
+                if (!indicatorGroups[filter.indicator]) {
+                    indicatorGroups[filter.indicator] = [];
+                }
+                indicatorGroups[filter.indicator].push(filter.id);
+            });
+
+            Object.entries(indicatorGroups).forEach(([indicatorId, filterIds]) => {
+                const indicator = document.getElementById(indicatorId);
+                if (indicator) {
+                    const hasActiveFilter = filterIds.some(filterId => {
+                        const input = document.getElementById(filterId);
+                        return input && input.value.trim() !== '';
+                    });
+
+                    if (hasActiveFilter) {
+                        indicator.classList.add('show');
+                    } else {
+                        indicator.classList.remove('show');
+                    }
+                }
+            });
+        }
+
+        const headerRow = document.querySelector('.header-row');
+
+        tableWrapper.addEventListener('scroll', function () {
+            const scrollTop = this.scrollTop;
+
+            if (scrollTop > lastScrollTop && scrollTop > 10) {
+                // Scrolling down
+                filterRow.classList.add('hidden');
+                headerRow.classList.remove('filters-visible');
+                headerRow.classList.add('filters-hidden');
+            } else if (scrollTop < lastScrollTop) {
+                // Scrolling up
+                filterRow.classList.remove('hidden');
+                headerRow.classList.remove('filters-hidden');
+                headerRow.classList.add('filters-visible');
+            }
+
+            lastScrollTop = scrollTop;
+        });
+
+        document.querySelectorAll('.filter-indicator').forEach(indicator => {
+            indicator.addEventListener('click', function () {
+                filterRow.classList.remove('hidden');
+                tableWrapper.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Update indicator when filters change
+        ['filter-time', 'filter-team1', 'filter-score1', 'filter-score2', 'filter-team2', 'filter-type', 'filter-action'].forEach(id => {
+            document.getElementById(id).addEventListener('input', function () {
+                applyFilters();
+                updateFilterIndicator();
+            });
+        });
+
+        // Initialize indicator state
+        updateFilterIndicator();
+
+        // Settings dropdown functionality
+        document.getElementById('settings-button').addEventListener('click', function (e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('settings-dropdown');
+            dropdown.classList.toggle('show');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function () {
+            const dropdown = document.getElementById('settings-dropdown');
+            dropdown.classList.remove('show');
+        });
+
+        // Prevent dropdown from closing when clicking inside it
+        document.getElementById('settings-dropdown').addEventListener('click', function (e) {
+            e.stopPropagation();
+        });
+
+        //Add event listener for difference toggle
+        document.getElementById('diff-toggle').addEventListener('change', function () {
+            initChart();
+        });
+        // Initialize chart
+        initChart();
+
+        // Handle window resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                initChart();
+            }, 100);
+        });
+    </script>
+</body>
+
+</html>
