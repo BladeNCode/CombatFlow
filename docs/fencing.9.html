@@ -594,6 +594,17 @@
             border-bottom: 1px solid rgba(var(--border-medium), 0.08);
         }
 
+        .fencer-change-line {
+            stroke: rgba(var(--border-medium), 0.3);
+            stroke-width: 2;
+            stroke-dasharray: 5, 5;
+        }
+
+        .fencer-change-line:hover {
+            stroke: rgba(var(--border-medium), 0.6);
+            stroke-width: 3;
+        }
+
         /* Mobile styles */
         @media (max-width: 768px) {
             .container {
@@ -653,19 +664,19 @@
             <div class="settings-dropdown" id="settings-dropdown">
                 <div class="settings-item">
                     <label class="toggle-label">
-                        <span>Match Time</span>
+                        <span>Bout Time</span>
                         <div class="toggle-switch time-toggle-switch">
-                            <input type="checkbox" id="time-toggle" checked>
+                            <input type="checkbox" id="time-toggle">
                             <span class="toggle-slider"></span>
                         </div>
-                        <span>Bout Time</span>
+                        <span>Match Time</span>
                     </label>
                 </div>
                 <div class="settings-item">
                     <label class="toggle-label">
                         <span>Point Difference</span>
                         <div class="toggle-switch">
-                            <input type="checkbox" id="diff-toggle">
+                            <input type="checkbox" id="diff-toggle" checked>
                             <span class="toggle-slider"></span>
                         </div>
                     </label>
@@ -700,7 +711,8 @@
                             <th><span class="filter-indicator" id="filter-indicator-time"></span>Time</th>
                             <th><span class="filter-indicator" id="filter-indicator-team1"></span><span
                                     id="team1-header"></span></th>
-                            <th colspan="2" style="text-align: center;"><span class="filter-indicator" id="filter-indicator-score"></span>Score</th>
+                            <th colspan="2" style="text-align: center;"><span class="filter-indicator"
+                                    id="filter-indicator-score"></span>Score</th>
                             <th><span class="filter-indicator" id="filter-indicator-team2"></span><span
                                     id="team2-header"></span></th>
                             <th><span class="filter-indicator" id="filter-indicator-type"></span>Type</th>
@@ -752,8 +764,8 @@
             return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
-        function calculateElapsedBoutTime(bout, boutTime) {
-            const totalBoutSeconds = bout * 3 * 60; // bout number * 3 minutes * 60 seconds
+        function calculateElapsedBoutTime(bout, boutTime, suddenDeath) {
+            const totalBoutSeconds = bout * (suddenDeath?(1+(bout-1)*3)/bout:3) * 60;
             const [minutes, seconds] = boutTime.split(':').map(Number);
             const remainingSeconds = minutes * 60 + seconds;
             const elapsedSeconds = totalBoutSeconds - remainingSeconds;
@@ -761,6 +773,19 @@
             const elapsedMinutes = Math.floor(elapsedSeconds / 60);
             const elapsedSecondsRemainder = elapsedSeconds % 60;
             return `${elapsedMinutes}:${elapsedSecondsRemainder.toString().padStart(2, '0')}`;
+        }
+
+        function timeToEffectiveMinutes(timeStr, bout, boutTime, isMatchTimeMode, suddenDeath) {
+            if (isMatchTimeMode) {
+                return timeToMinutes(timeStr);
+            } else {
+                // Calculate effective bout time in minutes
+                const totalBoutSeconds = bout * (suddenDeath?(1+(bout-1)*3)/bout:3) * 60;
+                const [minutes, seconds] = boutTime.split(':').map(Number);
+                const remainingSeconds = minutes * 60 + seconds;
+                const elapsedSeconds = totalBoutSeconds - remainingSeconds;
+                return elapsedSeconds / 60;
+            }
         }
 
         // Determine point winners
@@ -800,6 +825,7 @@
 
             // Check if difference chart is enabled
             const isDiffEnabled = document.getElementById('diff-toggle').checked;
+            let isMatchTimeMode = document.getElementById('time-toggle').checked;;
 
             let mainChartHeight, differenceChartHeight;
             if (isDiffEnabled) {
@@ -839,8 +865,11 @@
             const tooltip = d3.select('#tooltip');
 
             // Scales
+
+            const maxTime = Math.max(...plotData.map(d => timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath))) + 1;
+
             const x = d3.scaleLinear()
-                .domain([0, timeToMinutes('2:25:30')])
+                .domain([0, maxTime])
                 .range([0, totalWidth]);
 
             const y = d3.scaleLinear()
@@ -894,11 +923,11 @@
                 .attr('y2', mainChartHeight)
                 .on('mouseover', () => {
                     tooltip.html(`
-                    <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(0)}</strong></div>
-                    <div><strong>${TEAMS.team1.name}:</strong> ${matchStart.team1Score} (${matchStart.team1Player})</div>
-                    <div><strong>${TEAMS.team2.name}:</strong> ${matchStart.team2Score} (${matchStart.team2Player})</div>
-                    <div style="margin-top:8px;font-style:italic">${matchStart.action}</div>
-                `).style('opacity', 1);
+                        <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(0)}</strong></div>
+                        <div><strong>${TEAMS.team1.name}:</strong> ${matchStart.team1Score} (${matchStart.team1Player})</div>
+                        <div><strong>${TEAMS.team2.name}:</strong> ${matchStart.team2Score} (${matchStart.team2Player})</div>
+                        <div style="margin-top:8px;font-style:italic">${matchStart.action}</div>
+                    `).style('opacity', 1);
                 })
                 .on('mouseout', () => tooltip.style('opacity', 0));
 
@@ -913,41 +942,78 @@
             }
 
             // Add fencer change areas to main chart
-            mainSvg.selectAll('.fencer-change-area')
-                .data(fencerChanges)
-                .enter().append('rect')
-                .attr('class', 'fencer-change-area')
-                .attr('x', d => x(timeToMinutes(d.time)))
-                .attr('width', d => x(d.changeDuration))
-                .attr('y', 0)
-                .attr('height', mainChartHeight)
-                .on('mouseover', (event, d) => {
-                    tooltip.html(`
-                    <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(timeToMinutes(d.time))}</strong></div>
-                    <div><strong>Bout End</strong></div>
-                    <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player}: +${d.team1PlayerScore})</div>
-                    <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player}: +${d.team2PlayerScore})</div>
-                    <div style="margin-top:8px;font-style:italic">${d.action}</div>
-                `).style('opacity', 1);
-                })
-                .on('mouseout', () => tooltip.style('opacity', 0))
-                .on('click', (event, d) => {
-                    highlightTableRow(d);
-                });
-
-            // Add fencer change areas to difference chart only if enabled
-            if (isDiffEnabled && diffSvg) {
-                diffSvg.selectAll('.fencer-change-area')
+            if (isMatchTimeMode) {
+                mainSvg.selectAll('.fencer-change-area')
                     .data(fencerChanges)
                     .enter().append('rect')
                     .attr('class', 'fencer-change-area')
                     .attr('x', d => x(timeToMinutes(d.time)))
                     .attr('width', d => x(d.changeDuration))
                     .attr('y', 0)
-                    .attr('height', differenceChartHeight)
+                    .attr('height', mainChartHeight)
+                    .on('mouseover', (event, d) => {
+                        tooltip.html(`
+                            <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(timeToMinutes(d.time))}</strong></div>
+                            <div><strong>Bout End</strong></div>
+                            <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player}: +${d.team1PlayerScore})</div>
+                            <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player}: +${d.team2PlayerScore})</div>
+                            <div style="margin-top:8px;font-style:italic">${d.action}</div>
+                        `).style('opacity', 1);
+                    })
+                    .on('mouseout', () => tooltip.style('opacity', 0))
                     .on('click', (event, d) => {
                         highlightTableRow(d);
                     });
+            } else {
+                mainSvg.selectAll('.fencer-change-line')
+                    .data(fencerChanges)
+                    .enter().append('line')
+                    .attr('class', 'fencer-change-line')
+                    .attr('x1', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
+                    .attr('x2', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
+                    .attr('y1', 0)
+                    .attr('y2', mainChartHeight)
+                    .on('mouseover', (event, d) => {
+                        tooltip.html(`
+                            <div style="margin-bottom:8px;"><strong>${calculateElapsedBoutTime(d.bout, d.boutTime, d.isSuddenDeath)}</strong></div>
+                            <div><strong>Bout End</strong></div>
+                            <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player}: +${d.team1PlayerScore})</div>
+                            <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player}: +${d.team2PlayerScore})</div>
+                            <div style="margin-top:8px;font-style:italic">${d.action}</div>
+                        `).style('opacity', 1);
+                    })
+                    .on('mouseout', () => tooltip.style('opacity', 0))
+                    .on('click', (event, d) => {
+                        highlightTableRow(d);
+                    });
+            }
+            // Add fencer change areas to difference chart only if enabled
+            if (isDiffEnabled && diffSvg) {
+                if (isMatchTimeMode) {
+                    diffSvg.selectAll('.fencer-change-area')
+                        .data(fencerChanges)
+                        .enter().append('rect')
+                        .attr('class', 'fencer-change-area')
+                        .attr('x', d => x(timeToMinutes(d.time)))
+                        .attr('width', d => x(d.changeDuration))
+                        .attr('y', 0)
+                        .attr('height', differenceChartHeight)
+                        .on('click', (event, d) => {
+                            highlightTableRow(d);
+                        });
+                } else {
+                    diffSvg.selectAll('.fencer-change-line')
+                        .data(fencerChanges)
+                        .enter().append('line')
+                        .attr('class', 'fencer-change-line')
+                        .attr('x1', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
+                        .attr('x2', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
+                        .attr('y1', 0)
+                        .attr('y2', differenceChartHeight)
+                        .on('click', (event, d) => {
+                            highlightTableRow(d);
+                        });
+                }
             }
 
             // Find the final match point and loser's final score
@@ -977,7 +1043,7 @@
                 .datum(team1LineData)
                 .attr('class', 'line team1-line')
                 .attr('d', d3.line()
-                    .x(d => x(timeToMinutes(d.time)))
+                    .x(d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
                     .y(d => y(d.team1Score))
                     .curve(d3.curveStepAfter)
                 );
@@ -986,7 +1052,7 @@
                 .datum(team2LineData)
                 .attr('class', 'line team2-line')
                 .attr('d', d3.line()
-                    .x(d => x(timeToMinutes(d.time)))
+                    .x(d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
                     .y(d => y(d.team2Score))
                     .curve(d3.curveStepAfter)
                 );
@@ -1017,13 +1083,13 @@
 
                 // Add difference area
                 const areaPositive = d3.area()
-                    .x(d => x(timeToMinutes(d.time)))
+                    .x(d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
                     .y0(yDiff(0))
                     .y1(d => yDiff(d.winnerAdvantage))
                     .curve(d3.curveStepAfter);
 
                 const areaNegative = d3.area()
-                    .x(d => x(timeToMinutes(d.time)))
+                    .x(d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
                     .y0(yDiff(0))
                     .y1(d => yDiff(-d.loserAdvantage))
                     .curve(d3.curveStepAfter);
@@ -1040,26 +1106,26 @@
                     .attr('class', `difference-area ${team1IsWinner ? 'team2-difference' : 'team1-difference'}`)
                     .attr('d', areaNegative);
 
-                diffSvg.on('mousemove', (event) => {
+                    diffSvg.on('mousemove', (event) => {
                     const [mouseX] = d3.pointer(event);
-                    const timeValue = x.invert(mouseX);
+                        const timeValue = x.invert(mouseX);
 
-                    // Find closest data point
-                    const bisect = d3.bisector(d => timeToMinutes(d.time)).left;
-                    const index = bisect(differenceData, timeValue);
-                    const d0 = differenceData[index - 1];
-                    const d1 = differenceData[index];
-                    const d = d1 && (timeValue - timeToMinutes(d0.time) > timeToMinutes(d1.time) - timeValue) ? d1 : d0;
+                        // Find closest data point
+                        const bisect = d3.bisector(d => timeToMinutes(d.time)).left;
+                        const index = bisect(differenceData, timeValue);
+                        const d0 = differenceData[index - 1];
+                        const d1 = differenceData[index];
+                        const d = d1 && (timeValue - timeToMinutes(d0.time) > timeToMinutes(d1.time) - timeValue) ? d1 : d0;
 
-                    tooltip.html(`
-            <div style="text-align: center; max-width: 10px; font-size: 0.7rem; font-weight: 400;">
-                ${d.absoluteDifference}
-            </div>
-        `)
-                        .style('left', (event.pageX) + 'px')
-                        .style('top', (event.pageY - 90) + 'px')
-                        .style('opacity', 1);
-                })
+                            tooltip.html(`
+                                <div style="text-align: center; max-width: 10px; font-size: 0.7rem; font-weight: 400;">
+                                ${d.absoluteDifference}
+                                </div>
+                            `)
+                            .style('left', (event.pageX) + 'px')
+                            .style('top', (event.pageY - 90) + 'px')
+                            .style('opacity', 1);
+                    })
                     .on('mouseout', () => {
                         tooltip.style('opacity', 0);
                     });
@@ -1079,18 +1145,20 @@
                 .data(scoreChangesTeam1)
                 .enter().append('rect')
                 .attr('class', 'point team1-point')
-                .attr('x', d => x(timeToMinutes(d.time)) - 2.5)
+                .attr('x', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)) - 2.5)
                 .attr('y', d => y(d.team1Score) - 4)
                 .attr('width', 6)
                 .attr('height', 9)
                 .attr('rx', 2)
                 .on('mouseover', (event, d) => {
+                    const displayTime = isMatchTimeMode ? formatRelativeTimeTable(timeToMinutes(d.time)) : calculateElapsedBoutTime(d.bout, d.boutTime, d.isSuddenDeath);
+
                     tooltip.html(`
-                    <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(timeToMinutes(d.time))}</strong></div>
-                    <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player})</div>
-                    <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player})</div>
-                    <div style="margin-top:8px;font-style:italic">${d.action}</div>
-                `).style('opacity', 1);
+                        <div style="margin-bottom:8px;"><strong>${displayTime}</strong></div>
+                        <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player})</div>
+                        <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player})</div>
+                        <div style="margin-top:8px;font-style:italic">${d.action}</div>
+                    `).style('opacity', 1);
 
                     // If it's a double touch (DT), apply hover styles to the corresponding opposing team point
                     if (d.type === 'DT') {
@@ -1118,18 +1186,20 @@
                 .data(scoreChangesTeam2)
                 .enter().append('rect')
                 .attr('class', 'point team2-point')
-                .attr('x', d => x(timeToMinutes(d.time)) - 2.5)
+                .attr('x', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)) - 2.5)
                 .attr('y', d => y(d.team2Score) - 4)
                 .attr('width', 6)
                 .attr('height', 9)
                 .attr('rx', 2)
                 .on('mouseover', (event, d) => {
+                    const displayTime = isMatchTimeMode ? formatRelativeTimeTable(timeToMinutes(d.time)) : calculateElapsedBoutTime(d.bout, d.boutTime, d.isSuddenDeath);
+
                     tooltip.html(`
-                    <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(timeToMinutes(d.time))}</strong></div>
-                    <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player})</div>
-                    <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player})</div>
-                    <div style="margin-top:8px;font-style:italic">${d.action}</div>
-                `).style('opacity', 1);
+                        <div style="margin-bottom:8px;"><strong>${displayTime}</strong></div>
+                        <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player})</div>
+                        <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player})</div>
+                        <div style="margin-top:8px;font-style:italic">${d.action}</div>
+                    `).style('opacity', 1);
 
                     // If it's a double touch (DT), apply hover styles to the corresponding opposing team point
                     if (d.type === 'DT') {
@@ -1420,7 +1490,7 @@
             });
 
             const timeCell = row.append('td');
-            timeCell.append('span').text('BT: ' + calculateElapsedBoutTime(d.bout, d.boutTime)); // Add bout time here d.bout * 3mins - d.boutTime
+            timeCell.append('span').text('BT: ' + calculateElapsedBoutTime(d.bout, d.boutTime, d.isSuddenDeath));
             timeCell.append('br');
             timeCell.append('span').text('MT: ' + formatRelativeTimeTable(timeToMinutes(d.time)));
             timeCell.append('br');
@@ -1574,6 +1644,13 @@
         document.getElementById('diff-toggle').addEventListener('change', function () {
             initChart();
         });
+
+        // Add event listener for time toggle
+        document.getElementById('time-toggle').addEventListener('change', function () {
+            isMatchTimeMode = !this.checked; // unchecked = Match Time, checked = Bout Time
+            initChart();
+        });
+
         // Initialize chart
         initChart();
 
