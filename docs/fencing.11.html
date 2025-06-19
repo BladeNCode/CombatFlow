@@ -598,11 +598,20 @@
             stroke: rgba(var(--border-medium), 0.3);
             stroke-width: 2;
             stroke-dasharray: 5, 5;
+            transition: all 0.5s ease-in;
         }
 
-        .fencer-change-line:hover {
-            stroke: rgba(var(--border-medium), 0.6);
+        .fencer-change-line:hover, .fencer-change-line-highlighted {
+            stroke: rgba(var(--border-medium), 0.4);
             stroke-width: 3;
+            stroke-dasharray: none;
+        }
+
+        .fencer-change-line-fade {
+            stroke: rgba(var(--border-medium), 0.3);
+            stroke-width: 2;
+            stroke-dasharray: 5, 5;
+            transition: all 0.5s ease-out;
         }
 
         /* Mobile styles */
@@ -631,8 +640,11 @@
                 min-height: 60vh;
             }
 
+            table {
+                font-size: 0.7rem;
+            }
+
             .table-wrapper {
-                /* padding: 0 1rem; */
                 height: 100%;
                 overflow-y: auto;
             }
@@ -765,7 +777,7 @@
         }
 
         function calculateElapsedBoutTime(bout, boutTime, suddenDeath) {
-            const totalBoutSeconds = bout * (suddenDeath?(1+(bout-1)*3)/bout:3) * 60;
+            const totalBoutSeconds = bout * (suddenDeath ? (1 + (bout - 1) * 3) / bout : 3) * 60;
             const [minutes, seconds] = boutTime.split(':').map(Number);
             const remainingSeconds = minutes * 60 + seconds;
             const elapsedSeconds = totalBoutSeconds - remainingSeconds;
@@ -780,7 +792,7 @@
                 return timeToMinutes(timeStr);
             } else {
                 // Calculate effective bout time in minutes
-                const totalBoutSeconds = bout * (suddenDeath?(1+(bout-1)*3)/bout:3) * 60;
+                const totalBoutSeconds = bout * (suddenDeath ? (1 + (bout - 1) * 3) / bout : 3) * 60;
                 const [minutes, seconds] = boutTime.split(':').map(Number);
                 const remainingSeconds = minutes * 60 + seconds;
                 const elapsedSeconds = totalBoutSeconds - remainingSeconds;
@@ -862,7 +874,12 @@
                     .attr('transform', `translate(${margin.left},0)`);
             }
             // Tooltip
-            const tooltip = d3.select('#tooltip');
+            const tooltip = d3.select('#tooltip')
+                .style('position', 'absolute')
+                .style('pointer-events', 'none')
+                .style('opacity', 0)
+                .style('z-index', 1000);
+
 
             // Scales
 
@@ -920,16 +937,7 @@
                 .attr('x1', x(0))
                 .attr('x2', x(0))
                 .attr('y1', 0)
-                .attr('y2', mainChartHeight)
-                .on('mouseover', () => {
-                    tooltip.html(`
-                        <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(0)}</strong></div>
-                        <div><strong>${TEAMS.team1.name}:</strong> ${matchStart.team1Score} (${matchStart.team1Player})</div>
-                        <div><strong>${TEAMS.team2.name}:</strong> ${matchStart.team2Score} (${matchStart.team2Player})</div>
-                        <div style="margin-top:8px;font-style:italic">${matchStart.action}</div>
-                    `).style('opacity', 1);
-                })
-                .on('mouseout', () => tooltip.style('opacity', 0));
+                .attr('y2', mainChartHeight);
 
             // Add match start line to difference chart only if enabled
             if (isDiffEnabled && diffSvg) {
@@ -951,16 +959,7 @@
                     .attr('width', d => x(d.changeDuration))
                     .attr('y', 0)
                     .attr('height', mainChartHeight)
-                    .on('mouseover', (event, d) => {
-                        tooltip.html(`
-                            <div style="margin-bottom:8px;"><strong>${formatRelativeTimeTable(timeToMinutes(d.time))}</strong></div>
-                            <div><strong>Bout End</strong></div>
-                            <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player}: +${d.team1PlayerScore})</div>
-                            <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player}: +${d.team2PlayerScore})</div>
-                            <div style="margin-top:8px;font-style:italic">${d.action}</div>
-                        `).style('opacity', 1);
-                    })
-                    .on('mouseout', () => tooltip.style('opacity', 0))
+                    .style('pointer-events', 'none')
                     .on('click', (event, d) => {
                         highlightTableRow(d);
                     });
@@ -973,16 +972,7 @@
                     .attr('x2', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
                     .attr('y1', 0)
                     .attr('y2', mainChartHeight)
-                    .on('mouseover', (event, d) => {
-                        tooltip.html(`
-                            <div style="margin-bottom:8px;"><strong>${calculateElapsedBoutTime(d.bout, d.boutTime, d.isSuddenDeath)}</strong></div>
-                            <div><strong>Bout End</strong></div>
-                            <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player}: +${d.team1PlayerScore})</div>
-                            <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player}: +${d.team2PlayerScore})</div>
-                            <div style="margin-top:8px;font-style:italic">${d.action}</div>
-                        `).style('opacity', 1);
-                    })
-                    .on('mouseout', () => tooltip.style('opacity', 0))
+                    .style('pointer-events', 'none')
                     .on('click', (event, d) => {
                         highlightTableRow(d);
                     });
@@ -1057,6 +1047,17 @@
                     .curve(d3.curveStepAfter)
                 );
 
+            // Create vertical cursor line that spans both charts
+            const cursorLine = d3.select('#chart-container')
+                .append('div')
+                .attr('id', 'cursor-line')
+                .style('position', 'absolute')
+                .style('width', '1px')
+                .style('background', `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--border-light')}, 0.6)`)
+                .style('pointer-events', 'none')
+                .style('opacity', 0)
+                .style('z-index', 999);
+
             // Add difference chart elements only if enabled
             if (isDiffEnabled && diffSvg) {
                 // Add zero line to difference chart
@@ -1105,36 +1106,7 @@
                     .datum(differenceData)
                     .attr('class', `difference-area ${team1IsWinner ? 'team2-difference' : 'team1-difference'}`)
                     .attr('d', areaNegative);
-
-                    diffSvg.on('mousemove', (event) => {
-                    const [mouseX] = d3.pointer(event);
-                        const timeValue = x.invert(mouseX);
-
-                        // Find closest data point
-                        const bisect = d3.bisector(d => timeToMinutes(d.time)).left;
-                        const index = bisect(differenceData, timeValue);
-                        const d0 = differenceData[index - 1];
-                        const d1 = differenceData[index];
-                        const d = d1 && (timeValue - timeToMinutes(d0.time) > timeToMinutes(d1.time) - timeValue) ? d1 : d0;
-
-                            tooltip.html(`
-                                <div style="text-align: center; max-width: 10px; font-size: 0.7rem; font-weight: 400;">
-                                ${d.absoluteDifference}
-                                </div>
-                            `)
-                            .style('left', (event.pageX) + 'px')
-                            .style('top', (event.pageY - 90) + 'px')
-                            .style('opacity', 1);
-                    })
-                    .on('mouseout', () => {
-                        tooltip.style('opacity', 0);
-                    });
             }
-
-            // Handle hover reset for main chart
-            mainSvg.on('mouseover', () => {
-                tooltip.style('left', '40px').style('top', '0px');
-            });
 
             // Add points only when score changes to main chart
             const scoreChangesTeam1 = plotData.filter((d, i) => d.team1Score > 0 && (i === 0 || d.team1Score !== plotData[i - 1].team1Score));
@@ -1150,33 +1122,8 @@
                 .attr('width', 6)
                 .attr('height', 9)
                 .attr('rx', 2)
-                .on('mouseover', (event, d) => {
-                    const displayTime = isMatchTimeMode ? formatRelativeTimeTable(timeToMinutes(d.time)) : calculateElapsedBoutTime(d.bout, d.boutTime, d.isSuddenDeath);
-
-                    tooltip.html(`
-                        <div style="margin-bottom:8px;"><strong>${displayTime}</strong></div>
-                        <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player})</div>
-                        <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player})</div>
-                        <div style="margin-top:8px;font-style:italic">${d.action}</div>
-                    `).style('opacity', 1);
-
-                    // If it's a double touch (DT), apply hover styles to the corresponding opposing team point
-                    if (d.type === 'DT') {
-                        d3.selectAll('.team2-point')
-                            .filter(point => point.time === d.time)
-                            .classed('point-highlighted', true);
-                    }
-                })
-                .on('mouseout', (event, d) => {
-                    tooltip.style('opacity', 0);
-
-                    // If it's a double touch, reset the opposing team point
-                    if (d.type === 'DT') {
-                        d3.selectAll('.team2-point')
-                            .filter(point => point.time === d.time)
-                            .classed('point-highlighted', false);
-                    }
-                })
+                .style('pointer-events', 'all')
+                .style('cursor', 'pointer')
                 .on('click', (event, d) => {
                     highlightTableRow(d);
                 });
@@ -1191,36 +1138,131 @@
                 .attr('width', 6)
                 .attr('height', 9)
                 .attr('rx', 2)
-                .on('mouseover', (event, d) => {
-                    const displayTime = isMatchTimeMode ? formatRelativeTimeTable(timeToMinutes(d.time)) : calculateElapsedBoutTime(d.bout, d.boutTime, d.isSuddenDeath);
-
-                    tooltip.html(`
-                        <div style="margin-bottom:8px;"><strong>${displayTime}</strong></div>
-                        <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player})</div>
-                        <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player})</div>
-                        <div style="margin-top:8px;font-style:italic">${d.action}</div>
-                    `).style('opacity', 1);
-
-                    // If it's a double touch (DT), apply hover styles to the corresponding opposing team point
-                    if (d.type === 'DT') {
-                        d3.selectAll('.team1-point')
-                            .filter(point => point.time === d.time)
-                            .classed('point-highlighted', true);
-                    }
-                })
-                .on('mouseout', (event, d) => {
-                    tooltip.style('opacity', 0);
-
-                    // If it's a double touch, reset the opposing team point
-                    if (d.type === 'DT') {
-                        d3.selectAll('.team1-point')
-                            .filter(point => point.time === d.time)
-                            .classed('point-highlighted', false);
-                    }
-                })
+                .style('pointer-events', 'all')
+                .style('cursor', 'pointer')
                 .on('click', (event, d) => {
                     highlightTableRow(d);
                 });
+
+            const mouseOverlay = d3.select('#chart-container')
+                .append('div')
+                .style('position', 'absolute')
+                .style('top', '0')
+                .style('left', '0')
+                .style('width', '100%')
+                .style('height', '100%')
+                .style('pointer-events', 'all')
+                .style('background', 'transparent')
+                .style('z-index', 1) // Below points (which have higher z-index)
+                .on('mousemove', function (event) {
+                    let currentHighlightedPoint = null;
+                    const containerRect = this.getBoundingClientRect();
+                    const mainChartRect = document.getElementById('main-chart').getBoundingClientRect();
+
+                    const mouseX = event.clientX - mainChartRect.left - margin.left;
+                    const timeValue = x.invert(mouseX);
+
+                    // Show cursor line
+                    const lineX = event.clientX - containerRect.left;
+                    cursorLine
+                        .style('left', lineX + 'px')
+                        .style('top', '0px')
+                        .style('height', containerRect.height + 'px')
+                        .style('opacity', 1);
+
+                    // Find closest data point
+                    const allDataPoints = [...plotData, ...fencerChanges].sort((a, b) =>
+                        timeToEffectiveMinutes(a.time, a.bout, a.boutTime, isMatchTimeMode, a.isSuddenDeath) -
+                        timeToEffectiveMinutes(b.time, b.bout, b.boutTime, isMatchTimeMode, b.isSuddenDeath)
+                    );
+                    const bisect = d3.bisector(d => timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)).left;
+                    const index = bisect(allDataPoints, timeValue);
+                    const d0 = allDataPoints[index - 1];
+                    const d1 = allDataPoints[index];
+                    const d = d1 && d0 && (timeValue - timeToEffectiveMinutes(d0.time, d0.bout, d0.boutTime, isMatchTimeMode, d0.isSuddenDeath) > timeToEffectiveMinutes(d1.time, d1.bout, d1.boutTime, isMatchTimeMode, d1.isSuddenDeath) - timeValue) ? d1 : d0;
+
+                    if (d) {
+                        const displayTime = isMatchTimeMode ? formatRelativeTimeTable(timeToMinutes(d.time)) : calculateElapsedBoutTime(d.bout, d.boutTime, d.isSuddenDeath);
+                        const scoreDiff = Math.abs(d.team1Score - d.team2Score);
+
+                        // Always clear all highlights first
+                        d3.selectAll('.point').classed('point-highlighted', false);
+                        d3.selectAll('.fencer-change-area').classed('fencer-change-area-highlighted', false);
+                        d3.selectAll('.fencer-change-line').classed('fencer-change-line-highlighted', false);
+
+                        // Only highlight if we have a valid point and it's different from current
+                        if (!currentHighlightedPoint || currentHighlightedPoint.time !== d.time) {
+                            currentHighlightedPoint = d;
+                        }
+
+                        // Apply highlight to current point or fencer change
+                        if (d.isFencerChange) {
+                            // Highlight fencer change areas
+                            d3.selectAll('.fencer-change-area')
+                                .filter(change => change.time === d.time)
+                                .classed('fencer-change-area-highlighted', true);
+                            
+                            // Highlight fencer change lines
+                            d3.selectAll('.fencer-change-line')
+                                .filter(change => change.time === d.time)
+                                .classed('fencer-change-line-highlighted', true);
+                        } else {
+                            // Apply highlight to scoring points
+                        if (d.team1Won) {
+                            d3.selectAll('.team1-point')
+                                .filter(point => point.time === d.time)
+                                .classed('point-highlighted', true);
+                        }
+                        if (d.team2Won) {
+                            d3.selectAll('.team2-point')
+                                .filter(point => point.time === d.time)
+                                .classed('point-highlighted', true);
+                            }
+                        }
+
+                        tooltip.html(`
+                            <div style="margin-bottom:8px;"><strong>${displayTime}</strong></div>
+                            <div><strong>${TEAMS.team1.name}:</strong> ${d.team1Score} (${d.team1Player})</div>
+                            <div><strong>${TEAMS.team2.name}:</strong> ${d.team2Score} (${d.team2Player})</div>
+                            <div style="margin-top:8px;"><strong>Difference:</strong> ${scoreDiff > 0 ? `+${scoreDiff} ${d.team1Score > d.team2Score ? TEAMS.team1.code : TEAMS.team2.code}` : scoreDiff === 0 ? '0' : `${scoreDiff}`}</div>
+                            <div style="margin-top:8px;font-style:italic">${d.action}</div>
+                        `)
+                            .style('opacity', 1);
+                    }
+                })
+                .on('mouseleave', function () {
+                    cursorLine.style('opacity', 0);
+                    tooltip.style('opacity', 0);
+                    d3.selectAll('.point').classed('point-highlighted', false);
+                    d3.selectAll('.fencer-change-area').classed('fencer-change-area-highlighted', false);
+                    d3.selectAll('.fencer-change-line').classed('fencer-change-line-highlighted', false);
+                })
+                .on('click', function (event) {
+                    const containerRect = this.getBoundingClientRect();
+                    const mainChartRect = document.getElementById('main-chart').getBoundingClientRect();
+
+                    const mouseX = event.clientX - mainChartRect.left - margin.left;
+                    const timeValue = x.invert(mouseX);
+
+                    // Find closest data point for click
+                    const allDataPoints = [...plotData, ...fencerChanges].sort((a, b) =>
+                        timeToEffectiveMinutes(a.time, a.bout, a.boutTime, isMatchTimeMode, a.isSuddenDeath) -
+                        timeToEffectiveMinutes(b.time, b.bout, b.boutTime, isMatchTimeMode, b.isSuddenDeath)
+                    );
+                    const bisect = d3.bisector(d => timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)).left;
+                    const index = bisect(allDataPoints, timeValue);
+                    const d0 = allDataPoints[index - 1];
+                    const d1 = allDataPoints[index];
+                    const d = d1 && d0 && (timeValue - timeToEffectiveMinutes(d0.time, d0.bout, d0.boutTime, isMatchTimeMode, d0.isSuddenDeath) > timeToEffectiveMinutes(d1.time, d1.bout, d1.boutTime, isMatchTimeMode, d1.isSuddenDeath) - timeValue) ? d1 : d0;
+
+                    if (d) {
+                        highlightTableRow(d);
+                    }
+                });
+
+            // Update point styles to ensure they're above the overlay
+            mainSvg.selectAll('.team1-point, .team2-point')
+                .style('z-index', 10);
 
             // Add legend
             const legend = mainSvg.append('g')
@@ -1279,7 +1321,7 @@
 
                 // Determine highlight class
                 let highlightClass;
-                if (d.type === 'DT') {
+                if (d.type === 'D') {
                     highlightClass = 'row-highlight-neutral';
                 } else if (d.team1Won) {
                     highlightClass = 'row-highlight-team1';
@@ -1313,6 +1355,7 @@
             if (d.isFencerChange) {
                 // Find and highlight the corresponding fencer change rectangle
                 const allRectangles = d3.selectAll('.fencer-change-area');
+                const allLines = d3.selectAll('.fencer-change-line');
 
                 // Find the matching rectangle based on time
                 const matchingRectangles = allRectangles.filter(function () {
@@ -1320,18 +1363,28 @@
                     return rectData && rectData.time === d.time;
                 });
 
+                // Find the matching line based on time
+                const matchingLines = allLines.filter(function () {
+                    const lineData = d3.select(this).datum();
+                    return lineData && lineData.time === d.time;
+                });
+
                 matchingRectangles.classed('fencer-change-area-highlighted', true);
+                matchingLines.classed('fencer-change-line-highlighted', true);
 
                 // Fade out over time
                 setTimeout(() => {
                     matchingRectangles.classed('fencer-change-area-fade', true);
-                }, 100);
+                    matchingLines.classed('fencer-change-line-fade', true);
+                }, 90);
 
                 // Clean up classes after transition
                 setTimeout(() => {
                     matchingRectangles.classed('fencer-change-area-highlighted', false)
                         .classed('fencer-change-area-fade', false);
-                }, 4100);
+                    matchingLines.classed('fencer-change-line-highlighted', false)
+                        .classed('fencer-change-line-fade', false);
+                }, 500);
 
             } else {
                 // Find and highlight the corresponding chart point
@@ -1463,7 +1516,7 @@
 
                     // Determine highlight class
                     let highlightClass;
-                    if (d.type === 'DT') {
+                    if (d.type === 'D') {
                         highlightClass = 'row-highlight-neutral';
                     } else if (d.team1Won) {
                         highlightClass = 'row-highlight-team1';
