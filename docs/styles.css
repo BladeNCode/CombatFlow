@@ -1,0 +1,806 @@
+/* ==========================================================================
+   CSS Variables
+   ========================================================================== */
+
+:root {
+    /* Base Colors (RGB values) */
+    --primary-blue: 59, 130, 246;
+    --primary-orange: 239, 139, 68;
+    --neutral-gray: 156, 163, 175;
+    --highlight: 0, 145, 110;
+    --text-primary: 37, 50, 55;
+    --text-secondary: 108, 143, 157;
+    --text-tertiary: 55, 65, 81;
+    --bg-primary: 255, 255, 255;
+    --bg-secondary: 248, 249, 250;
+    --bg-tertiary: 233, 236, 239;
+    --bg-quaternary: 249, 250, 251;
+    --border-light: 0, 0, 0;
+    --border-medium: 0, 0, 0;
+    --shadow-light: 0, 0, 0;
+    --shadow-medium: 0, 0, 0;
+
+    /* Team Colors */
+    --team1-primary: rgb(var(--primary-blue));
+    --team1-secondary: rgba(var(--primary-blue), 0.8);
+    --team1-light: rgba(var(--primary-blue), 0.2);
+    --team1-line: rgba(var(--primary-blue), 0.3);
+    --team2-primary: rgb(var(--primary-orange));
+    --team2-secondary: rgba(var(--primary-orange), 0.67);
+    --team2-light: rgba(var(--primary-orange), 0.3);
+    --team2-line: rgba(var(--primary-orange), 0.3);
+
+    /* Interactive States */
+    --highlight-color: rgba(var(--highlight), 1);
+    --highlight-gray: rgba(var(--neutral-gray), 0.3);
+    --highlight-gray-hover: rgba(var(--neutral-gray), 0.5);
+    --highlight-gray-dark: rgba(var(--neutral-gray), 0.7);
+    --match-start-bg: rgba(var(--neutral-gray), 0.2);
+    --match-start-bg-hover: rgba(var(--neutral-gray), 0.3);
+    --match-start-line: rgba(var(--neutral-gray), 0.4);
+}
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: rgb(var(--text-primary));
+    background: linear-gradient(135deg, rgb(var(--bg-secondary)) 0%, rgb(var(--bg-tertiary)) 100%);
+    min-height: 100vh;
+}
+
+/* ==========================================================================
+   Typography
+   ========================================================================== */
+
+h1 {
+    margin: 0.3rem;
+    font-weight: 300;
+    font-size: 1.75rem;
+    color: rgba(var(--text-tertiary), 1);
+    text-align: left;
+}
+
+.title-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7 px;
+}
+
+.nav-arrow {
+    background: none;
+    border: none;
+    /* border: 1px solid rgba(var(--border-light), 0.3); */
+    /* border-radius: 2px; */
+    padding: 3px 5px;
+    cursor: pointer;
+    font-size: 16px;
+    color: rgba(var(--text-primary), 0.7);
+    transition: all 0.2s ease;
+}
+
+.nav-arrow:hover {
+    background: rgba(var(--border-light), 0.1);
+    color: rgba(var(--text-primary), 1);
+    /* border-color: rgba(var(--border-light), 0.5); */
+}
+
+a {
+    color: rgb(var(--primary-blue));
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+a:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   Layout Components
+   ========================================================================== */
+
+.container {
+    display: flex;
+    height: calc(100vh - 65px);
+    padding: 0;
+    gap: 0;
+}
+
+/* ==========================================================================
+   Header Components
+   ========================================================================== */
+
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(var(--bg-primary), 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(var(--border-light), 0.05);
+}
+
+.header-row {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    transition: top 0.3s ease;
+}
+
+.header-row.filters-hidden {
+    top: 0;
+}
+
+.header-row.filters-visible {
+    top: 35px;
+}
+
+/* ==========================================================================
+   Settings Components
+   ========================================================================== */
+
+.settings-container {
+    position: relative;
+}
+
+.settings-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    background: none;
+    border: 1px solid rgba(var(--border-medium), 0.2);
+    border-radius: 6px;
+    color: rgb(var(--text-tertiary));
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.settings-button:hover {
+    background: rgba(var(--highlight-gray), 0.1);
+    border-color: rgba(var(--border-medium), 0.4);
+}
+
+.settings-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 1000;
+    margin-top: 0.5rem;
+    padding: 1rem;
+    min-width: 240px;
+    background: rgba(var(--bg-primary), 0.98);
+    border: 1px solid rgba(var(--border-medium), 0.2);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(var(--shadow-medium), 0.15);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+}
+
+.settings-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.settings-item {
+    margin-bottom: 1rem;
+}
+
+.settings-item:last-child {
+    margin-bottom: 0;
+}
+
+/* ==========================================================================
+   Toggle Components
+   ========================================================================== */
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: rgb(var(--text-primary));
+    cursor: pointer;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: rgba(var(--neutral-gray), 0.3);
+    border-radius: 24px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.toggle-slider::before {
+    position: absolute;
+    bottom: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    background-color: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(var(--shadow-light), 0.2);
+    transition: 0.3s;
+    content: '';
+}
+
+.toggle-switch input:checked+.toggle-slider {
+    background-color: var(--highlight-color);
+}
+
+.toggle-switch input:checked+.toggle-slider::before {
+    transform: translateX(20px);
+}
+
+.time-toggle-switch input+.toggle-slider {
+    background-color: var(--highlight-color);
+}
+
+.time-toggle-switch input:checked+.toggle-slider {
+    background-color: var(--highlight-color);
+}
+
+/* ==========================================================================
+   Chart Components
+   ========================================================================== */
+
+#chart-container {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    background: rgb(var(--bg-primary));
+    border-right: 1px solid rgba(var(--border-medium), 0.08);
+}
+
+#chart {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 0 1rem;
+    overflow: hidden;
+}
+
+#main-chart {
+    flex: 0 0 auto;
+}
+
+#difference-chart {
+    flex: 0 0 auto;
+    border-top: 1px solid rgba(var(--border-medium), 0.08);
+}
+
+/* Chart Elements */
+.point {
+    stroke: rgba(var(--bg-secondary), 0.9);
+    stroke-width: 1.5px;
+    filter: drop-shadow(0 1px 2px rgba(var(--shadow-light), 0.1));
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.point:hover,
+.point-highlighted {
+    stroke: var(--highlight-color);
+    stroke-width: 3px;
+    transition: none;
+}
+
+.point-highlighted-fade {
+    stroke: var(--highlight-color) !important;
+    stroke-width: 3px !important;
+    transition: stroke-width 0.3s ease-out, stroke 0.3s ease-out !important;
+}
+
+.point-filtered {
+    opacity: 0.2;
+    transition: opacity 0.3s ease;
+}
+
+.team1-point {
+    fill: var(--team1-secondary);
+}
+
+.team2-point {
+    fill: var(--team2-secondary);
+}
+
+/* Chart Lines */
+.line {
+    fill: none;
+    stroke-width: 3px;
+    filter: drop-shadow(0 1px 2px rgba(var(--shadow-light), 0.1));
+}
+
+.team1-line {
+    stroke: var(--team1-line);
+}
+
+.team2-line {
+    stroke: var(--team2-line);
+}
+
+.difference-line {
+    fill: none;
+    stroke-width: 2px;
+}
+
+.difference-area {
+    fill-opacity: 0.3;
+}
+
+.team1-difference {
+    stroke: var(--team1-line);
+    fill: var(--team1-line);
+}
+
+.team2-difference {
+    stroke: var(--team2-line);
+    fill: var(--team2-line);
+}
+
+.match-start-line {
+    stroke: var(--match-start-line);
+    stroke-width: 3px;
+    stroke-dasharray: 5, 5;
+}
+
+.fencer-change-line {
+    stroke: rgba(var(--border-medium), 0.3);
+    stroke-width: 2;
+    stroke-dasharray: 5, 5;
+    transition: all 0.5s ease-in;
+}
+
+.fencer-change-line:hover,
+.fencer-change-line-highlighted {
+    stroke: rgba(var(--border-medium), 0.4);
+    stroke-width: 3;
+    stroke-dasharray: none;
+}
+
+.fencer-change-line-fade {
+    stroke: rgba(var(--border-medium), 0.3);
+    stroke-width: 2;
+    stroke-dasharray: 5, 5;
+    transition: all 0.5s ease-out;
+}
+
+/* Chart Areas */
+.fencer-change-area {
+    fill: var(--highlight-gray);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fencer-change-area:hover {
+    fill: var(--highlight-gray-hover);
+}
+
+.fencer-change-area-highlighted {
+    fill: var(--highlight-gray-dark);
+}
+
+.fencer-change-area-fade {
+    fill: var(--highlight-gray);
+    transition: fill 4s ease-out;
+}
+
+.fencer-change-area-filtered {
+    opacity: 0.2;
+    transition: opacity 0.3s ease;
+}
+
+/* Chart Axes */
+.axis text {
+    font-size: 0.75rem;
+    font-weight: 500;
+    fill: rgb(var(--text-secondary));
+}
+
+.axis path,
+.axis line {
+    stroke: var(--highlight-gray-hover);
+    stroke-width: 1;
+}
+
+.axis-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    fill: rgb(var(--text-tertiary));
+}
+
+.grid .domain {
+    display: none;
+}
+
+/* ==========================================================================
+   Legend Components
+   ========================================================================== */
+
+.legend {
+    padding: 0.5rem;
+    background: rgba(var(--bg-primary), 0.95);
+    border: 1px solid rgba(var(--border-medium), 0.8);
+    border-radius: 6px;
+    backdrop-filter: blur(10px);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.legend-item:last-child {
+    margin-bottom: 0;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    margin-right: 0.5rem;
+    border: 2px solid rgba(var(--bg-primary), 0.9);
+    border-radius: 50%;
+}
+
+/* ==========================================================================
+   Tooltip Components
+   ========================================================================== */
+
+#tooltip {
+    position: absolute;
+    top: 0;
+    left: 40px;
+    z-index: 1000;
+    max-width: 180px;
+    padding: 0.3rem;
+    font-size: 0.65rem;
+    line-height: 1.3;
+    background: rgba(var(--bg-primary), 0.98);
+    border: 1px solid rgba(var(--border-medium), 0.08);
+    border-radius: 4px;
+    box-shadow: 0 6px 18px rgba(var(--shadow-medium), 0.12);
+    backdrop-filter: blur(10px);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+#tooltip strong {
+    font-weight: 600;
+    color: rgba(var(--text-tertiary), 0.9);
+}
+
+/* ==========================================================================
+   Table Components
+   ========================================================================== */
+
+#table-container {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    background: rgb(var(--bg-primary));
+}
+
+.table-wrapper {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.table-wrapper::-webkit-scrollbar {
+    width: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+    background: rgba(var(--highlight-gray), 1);
+    border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(var(--highlight-gray), 1);
+    border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--highlight-gray), 1);
+}
+
+/* Table Structure */
+table {
+    width: 100%;
+    font-size: 0.8rem;
+    background: rgb(var(--bg-primary));
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+th,
+td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(var(--border-light), 0.05);
+}
+
+th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    font-weight: 600;
+    color: rgb(var(--text-secondary));
+    background: rgb(var(--bg-quaternary));
+    border-bottom: 2px solid rgba(var(--border-medium), 0.08);
+}
+
+/* Table Column Widths */
+th:nth-child(1),
+td:nth-child(1) {
+    width: 15%;
+    /* Time */
+}
+
+th:nth-child(2),
+td:nth-child(2) {
+    width: 15%;
+    /* Team1 */
+}
+
+th:nth-child(3),
+td:nth-child(3) {
+    width: 6%;
+    /* Score1 */
+}
+
+th:nth-child(4),
+td:nth-child(4) {
+    width: 6%;
+    /* Score2 */
+}
+
+th:nth-child(5),
+td:nth-child(5) {
+    width: 15%;
+    /* Team2 */
+}
+
+th:nth-child(6),
+td:nth-child(6) {
+    width: 8%;
+    /* Type */
+}
+
+th:nth-child(7),
+td:nth-child(7) {
+    width: 25%;
+    /* Action */
+}
+
+th:nth-child(8),
+td:nth-child(8) {
+    width: 10%;
+    /* Win */
+}
+
+/* Table Row States */
+tr {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+tr:hover {
+    background-color: rgba(var(--primary-blue), 0.02);
+}
+
+.fencer-change-row {
+    background-color: rgba(var(--neutral-gray), 0.4);
+}
+
+.fencer-change-row:hover {
+    background-color: rgba(var(--neutral-gray), 0.5);
+}
+
+.match-start-row {
+    background-color: var(--match-start-bg);
+}
+
+.match-start-row:hover {
+    background-color: var(--match-start-bg-hover);
+}
+
+.point-winner {
+    font-weight: bold;
+}
+
+.row-highlight-team1 {
+    background-color: var(--team1-light) !important;
+}
+
+.row-highlight-team2 {
+    background-color: var(--team2-light) !important;
+}
+
+.row-highlight-neutral {
+    background-color: var(--highlight-gray) !important;
+}
+
+.row-fade-transition {
+    transition: background-color 2s ease-out !important;
+}
+
+/* ==========================================================================
+   Filter Components
+   ========================================================================== */
+
+.filter-row {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgb(var(--bg-quaternary));
+    border-bottom: 1px solid rgba(var(--border-medium), 0.08);
+    transform: translateY(0);
+    transition: transform 0.3s ease;
+}
+
+.filter-row.hidden {
+    border-bottom: none;
+    transform: translateY(-100%);
+}
+
+.filter-row th {
+    padding: 0.2rem 0.2rem;
+    background: rgb(var(--bg-quaternary));
+    border-bottom: 1px solid rgba(var(--border-medium), 0.08);
+}
+
+.filter-row input {
+    width: 100%;
+    padding: 0.4rem;
+    font-size: 0.7rem;
+    color: rgb(var(--text-primary));
+    background: rgb(var(--bg-primary));
+    border: 1px solid rgba(var(--border-medium), 0.2);
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.filter-row input:focus {
+    border-color: var(--highlight-color);
+    box-shadow: 0 0 0 2px rgba(var(--highlight), 0.1);
+    outline: none;
+}
+
+.filter-indicator {
+    position: absolute;
+    top: 40%;
+    left: 2px;
+    z-index: 25;
+    width: 8px;
+    height: 8px;
+    background: var(--highlight-color);
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(-50%);
+    transition: opacity 0.3s ease;
+}
+
+.filter-indicator.show {
+    opacity: 1;
+}
+
+.filter-indicator:hover {
+    background: rgba(var(--highlight), 0.8);
+    transform: translateY(-50%) scale(1.2);
+}
+
+.filter-clear {
+    position: absolute;
+    top: 50%;
+    left: 2px;
+    z-index: 25;
+    width: 8px;
+    height: 8px;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 8px;
+    color: #dc3545;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+    display: none;
+}
+
+.filter-clear:hover {
+    color: #c82333;
+    transform: translateY(5%) scale(1.2);
+}
+
+.filter-clear.show {
+    display: block;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+        height: calc(100vh - 140px);
+    }
+
+    .header {
+        padding: 0.2rem;
+    }
+
+    h1 {
+        font-size: 1.2rem;
+    }
+
+    #chart-container {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        flex: 0 0 40%;
+        background: rgb(var(--bg-primary));
+        border-right: none;
+        border-bottom: 1px solid rgba(var(--border-medium), 0.08);
+    }
+
+    #chart {
+        padding: 0 0.5rem;
+    }
+
+    #table-container {
+        flex: 1;
+        min-height: 60vh;
+    }
+
+    .table-wrapper {
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    table {
+        font-size: 0.7rem;
+    }
+}

@@ -6,658 +6,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="data.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        :root {
-            /* Base Colors (RGB values) */
-            --primary-blue: 59, 130, 246;
-            --primary-orange: 239, 139, 68;
-            --neutral-gray: 156, 163, 175;
-            --highlight: 0, 145, 110;
-            /* 169,20,15 */
-            --text-primary: 37, 50, 55;
-            --text-secondary: 108, 143, 157;
-            --text-tertiary: 55, 65, 81;
-            --bg-primary: 255, 255, 255;
-            --bg-secondary: 248, 249, 250;
-            --bg-tertiary: 233, 236, 239;
-            --bg-quaternary: 249, 250, 251;
-            --border-light: 0, 0, 0;
-            --border-medium: 0, 0, 0;
-            --shadow-light: 0, 0, 0;
-            --shadow-medium: 0, 0, 0;
-
-            /* Team Colors */
-            --team1-primary: rgb(var(--primary-blue));
-            --team1-secondary: rgba(var(--primary-blue), 0.8);
-            --team1-light: rgba(var(--primary-blue), 0.2);
-            --team1-line: rgba(var(--primary-blue), 0.3);
-
-            --team2-primary: rgb(var(--primary-orange));
-            --team2-secondary: rgba(var(--primary-orange), 0.67);
-            --team2-light: rgba(var(--primary-orange), 0.3);
-            --team2-line: rgba(var(--primary-orange), 0.3);
-
-            /* Interactive States */
-            --highlight-color: rgba(var(--highlight), 1);
-            --highlight-gray: rgba(var(--neutral-gray), 0.3);
-            --highlight-gray-hover: rgba(var(--neutral-gray), 0.5);
-            --highlight-gray-dark: rgba(var(--neutral-gray), 0.7);
-            --match-start-bg: rgba(var(--neutral-gray), 0.2);
-            --match-start-bg-hover: rgba(var(--neutral-gray), 0.3);
-            --match-start-line: rgba(var(--neutral-gray), 0.4);
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            margin: 0;
-            padding: 0;
-            color: rgb(var(--text-primary));
-            background: linear-gradient(135deg, rgb(var(--bg-secondary)) 0%, rgb(var(--bg-tertiary)) 100%);
-            min-height: 100vh;
-        }
-
-        .header {
-            background: rgba(var(--bg-primary), 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(var(--border-light), 0.05);
-            padding: 0.75rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-row {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            transition: top 0.3s ease;
-        }
-
-        .header-row.filters-hidden {
-            top: 0;
-        }
-
-        .header-row.filters-visible {
-            top: 45px;
-        }
-
-        .settings-container {
-            position: relative;
-        }
-
-        .settings-button {
-            background: none;
-            border: 1px solid rgba(var(--border-medium), 0.2);
-            border-radius: 6px;
-            padding: 0.5rem;
-            cursor: pointer;
-            color: rgb(var(--text-tertiary));
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .settings-button:hover {
-            background: rgba(var(--highlight-gray), 0.1);
-            border-color: rgba(var(--border-medium), 0.4);
-        }
-
-        .settings-dropdown {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 0.5rem;
-            background: rgba(var(--bg-primary), 0.98);
-            border: 1px solid rgba(var(--border-medium), 0.2);
-            border-radius: 8px;
-            padding: 1rem;
-            min-width: 240px;
-            box-shadow: 0 8px 24px rgba(var(--shadow-medium), 0.15);
-            backdrop-filter: blur(10px);
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px);
-            transition: all 0.2s ease;
-            z-index: 1000;
-        }
-
-        .settings-dropdown.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .settings-item {
-            margin-bottom: 1rem;
-        }
-
-        .settings-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .toggle-label {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-size: 0.875rem;
-            color: rgb(var(--text-primary));
-            cursor: pointer;
-        }
-
-        .toggle-switch {
-            position: relative;
-            width: 44px;
-            height: 24px;
-        }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(var(--neutral-gray), 0.3);
-            transition: 0.3s;
-            border-radius: 24px;
-        }
-
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: 0.3s;
-            border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(var(--shadow-light), 0.2);
-        }
-
-        .toggle-switch input:checked+.toggle-slider {
-            background-color: var(--highlight-color);
-        }
-
-        .toggle-switch input:checked+.toggle-slider:before {
-            transform: translateX(20px);
-        }
-
-        .time-toggle-switch input+.toggle-slider {
-            background-color: var(--highlight-color);
-        }
-
-        .time-toggle-switch input:checked+.toggle-slider {
-            background-color: var(--highlight-color);
-        }
-
-        h1 {
-            font-weight: 300;
-            font-size: 1.75rem;
-            margin: 0.3rem;
-            color: rgba(var(--text-tertiary), 1);
-            text-align: left;
-        }
-
-        .container {
-            display: flex;
-            height: calc(100vh - 65px);
-            padding: 0;
-            gap: 0;
-        }
-
-        #chart-container {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            background: rgb(var(--bg-primary));
-            border-right: 1px solid rgba(var(--border-medium), 0.08);
-            position: relative;
-        }
-
-        #chart {
-            flex: 1;
-            padding: 0 1rem;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        #main-chart {
-            flex: 0 0 85%;
-        }
-
-        #difference-chart {
-            flex: 0 0 15%;
-            border-top: 1px solid rgba(var(--border-medium), 0.08);
-        }
-
-        #table-container {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            background: rgb(var(--bg-primary));
-        }
-
-        .table-wrapper {
-            flex: 1;
-            overflow-y: auto;
-            /* padding: 0 1rem 1rem; */
-        }
-
-        .table-wrapper::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .table-wrapper::-webkit-scrollbar-track {
-            background: rgba(var(--highlight-gray), 1);
-            border-radius: 4px;
-        }
-
-        .table-wrapper::-webkit-scrollbar-thumb {
-            background: rgba(var(--highlight-gray), 1);
-            border-radius: 4px;
-        }
-
-        .table-wrapper::-webkit-scrollbar-thumb:hover {
-            background: rgba(var(--highlight-gray), 1);
-        }
-
-        #tooltip {
-            position: absolute;
-            padding: 0.3rem;
-            background: rgba(var(--bg-primary), 0.98);
-            border: 1px solid rgba(var(--border-medium), 0.08);
-            border-radius: 4px;
-            /* pointer-events: none; */
-            max-width: 180px;
-            box-shadow: 0 6px 18px rgba(var(--shadow-medium), 0.12);
-            font-size: 0.65rem;
-            line-height: 1.3;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-            z-index: 1000;
-            backdrop-filter: blur(10px);
-            top: 0;
-            left: 40px;
-        }
-
-        #tooltip strong {
-            color: rgba(var(--text-tertiary), 0.9);
-            font-weight: 600;
-        }
-
-        .point {
-            cursor: pointer;
-            stroke-width: 1.5px;
-            stroke: rgba(var(--bg-secondary), 0.9);
-            transition: all 0.2s ease;
-            filter: drop-shadow(0 1px 2px rgba(var(--shadow-light), 0.1));
-        }
-
-        .point:hover,
-        .point-highlighted {
-            stroke-width: 3px;
-            stroke: var(--highlight-color);
-            transition: none;
-        }
-
-        .point-highlighted-fade {
-            stroke-width: 3px !important;
-            stroke: var(--highlight-color) !important;
-            transition: stroke-width 0.3s ease-out, stroke 0.3s ease-out !important;
-        }
-
-        .point-filtered {
-            opacity: 0.2;
-            transition: opacity 0.3s ease;
-        }
-
-        .fencer-change-area-filtered {
-            opacity: 0.2;
-            transition: opacity 0.3s ease;
-        }
-
-        .team1-point {
-            fill: var(--team1-secondary);
-        }
-
-        .team2-point {
-            fill: var(--team2-secondary);
-        }
-
-        .match-start-line {
-            stroke: var(--match-start-line);
-            stroke-width: 3px;
-            stroke-dasharray: 5, 5;
-            /* cursor: pointer; */
-        }
-
-        .fencer-change-area {
-            fill: var(--highlight-gray);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .fencer-change-area:hover {
-            fill: var(--highlight-gray-hover);
-        }
-
-        .fencer-change-area-highlighted {
-            fill: var(--highlight-gray-dark);
-        }
-
-        .fencer-change-area-fade {
-            fill: var(--highlight-gray);
-            transition: fill 4s ease-out;
-        }
-
-        .line {
-            stroke-width: 3px;
-            fill: none;
-            filter: drop-shadow(0 1px 2px rgba(var(--shadow-light), 0.1));
-        }
-
-        .team1-line {
-            stroke: var(--team1-line);
-        }
-
-        .team2-line {
-            stroke: var(--team2-line);
-        }
-
-        .difference-line {
-            stroke-width: 2px;
-            fill: none;
-        }
-
-        .difference-area {
-            fill-opacity: 0.3;
-        }
-
-        .team1-difference {
-            stroke: var(--team1-line);
-            fill: var(--team1-line);
-        }
-
-        .team2-difference {
-            stroke: var(--team2-line);
-            fill: var(--team2-line);
-        }
-
-        .axis text {
-            font-size: 0.75rem;
-            fill: rgb(var(--text-secondary));
-            font-weight: 500;
-        }
-
-        .axis path,
-        .axis line {
-            stroke: var(--highlight-gray-hover);
-            stroke-width: 1;
-        }
-
-        .axis-label {
-            font-size: 0.875rem;
-            font-weight: 600;
-            fill: rgb(var(--text-tertiary));
-        }
-
-        .grid .domain {
-            display: none;
-        }
-
-        a {
-            color: rgb(var(--primary-blue));
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.2s ease;
-        }
-
-        a:hover {
-            color: #1d4ed8;
-            text-decoration: underline;
-        }
-
-        .legend {
-            background: rgba(var(--bg-primary), 0.95);
-            padding: 0.5rem;
-            border-radius: 6px;
-            border: 1px solid rgba(var(--border-medium), 0.8);
-            backdrop-filter: blur(10px);
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .legend-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .legend-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 0.5rem;
-            border: 2px solid rgba(var(--bg-primary), 0.9);
-        }
-
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            font-size: 0.875rem;
-            background: rgb(var(--bg-primary));
-        }
-
-        th,
-        td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(var(--border-light), 0.05);
-        }
-
-        th {
-            font-weight: 600;
-            color: rgb(var(--text-secondary));
-            background: rgb(var(--bg-quaternary));
-            position: sticky;
-            top: 0px;
-            z-index: 10;
-            border-bottom: 2px solid rgba(var(--border-medium), 0.08);
-        }
-
-        tr {
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-
-        tr:hover {
-            background-color: rgba(var(--primary-blue), 0.02);
-        }
-
-        .fencer-change-row {
-            background-color: rgba(var(--neutral-gray), 0.4);
-        }
-
-        .fencer-change-row:hover {
-            background-color: rgba(var(--neutral-gray), 0.5);
-        }
-
-        .match-start-row {
-            background-color: var(--match-start-bg);
-        }
-
-        .match-start-row:hover {
-            background-color: var(--match-start-bg-hover);
-        }
-
-        .point-winner {
-            font-weight: bold;
-        }
-
-        .row-highlight-team1 {
-            background-color: var(--team1-light) !important;
-        }
-
-        .row-highlight-team2 {
-            background-color: var(--team2-light) !important;
-        }
-
-        .row-highlight-neutral {
-            background-color: var(--highlight-gray) !important;
-        }
-
-        .row-fade-transition {
-            transition: background-color 2s ease-out !important;
-        }
-
-        .filter-row {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            background: rgb(var(--bg-quaternary));
-            transition: transform 0.3s ease;
-            transform: translateY(0);
-            border-bottom: 1px solid rgba(var(--border-medium), 0.08);
-        }
-
-        .filter-row.hidden {
-            transform: translateY(-100%);
-            border-bottom: none;
-        }
-
-        .filter-indicator {
-            position: absolute;
-            top: 50%;
-            left: 2px;
-            transform: translateY(-50%);
-            width: 8px;
-            height: 8px;
-            background: var(--highlight-color);
-            border-radius: 50%;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            cursor: pointer;
-            z-index: 25;
-        }
-
-        .filter-indicator.show {
-            opacity: 1;
-        }
-
-        .filter-indicator:hover {
-            background: rgba(var(--highlight), 0.8);
-            transform: translateY(-50%) scale(1.2);
-        }
-
-        .filter-row input {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid rgba(var(--border-medium), 0.2);
-            border-radius: 4px;
-            font-size: 0.75rem;
-            background: rgb(var(--bg-primary));
-            color: rgb(var(--text-primary));
-            box-sizing: border-box;
-        }
-
-        .filter-row input:focus {
-            outline: none;
-            border-color: var(--highlight-color);
-            box-shadow: 0 0 0 2px rgba(var(--highlight), 0.1);
-        }
-
-        .filter-row th {
-            padding: 0.5rem 0.75rem;
-            background: rgb(var(--bg-quaternary));
-            border-bottom: 1px solid rgba(var(--border-medium), 0.08);
-        }
-
-        .fencer-change-line {
-            stroke: rgba(var(--border-medium), 0.3);
-            stroke-width: 2;
-            stroke-dasharray: 5, 5;
-            transition: all 0.5s ease-in;
-        }
-
-        .fencer-change-line:hover, .fencer-change-line-highlighted {
-            stroke: rgba(var(--border-medium), 0.4);
-            stroke-width: 3;
-            stroke-dasharray: none;
-        }
-
-        .fencer-change-line-fade {
-            stroke: rgba(var(--border-medium), 0.3);
-            stroke-width: 2;
-            stroke-dasharray: 5, 5;
-            transition: all 0.5s ease-out;
-        }
-
-        /* Mobile styles */
-        @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-                height: calc(100vh - 140px);
-            }
-
-            #chart-container {
-                flex: 0 0 40%;
-                border-right: none;
-                border-bottom: 1px solid rgba(var(--border-medium), 0.08);
-                position: sticky;
-                top: 0;
-                z-index: 50;
-                background: rgb(var(--bg-primary));
-            }
-
-            #chart {
-                padding: 0 0.5rem;
-            }
-
-            #table-container {
-                flex: 1;
-                min-height: 60vh;
-            }
-
-            table {
-                font-size: 0.7rem;
-            }
-
-            .table-wrapper {
-                height: 100%;
-                overflow-y: auto;
-            }
-
-            .header {
-                padding: 0.2rem;
-            }
-
-            h1 {
-                font-size: 1.2rem;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
@@ -693,6 +42,15 @@
                         </div>
                     </label>
                 </div>
+                <div class="settings-item">
+                    <label class="toggle-label">
+                        <span>Fencers</span>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="fencer-toggle">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </label>
+                </div>
             </div>
         </div>
     </div>
@@ -700,6 +58,7 @@
     <div class="container">
         <div id="chart-container">
             <div id="chart">
+                <div id="fencer-chart"></div>
                 <div id="main-chart"></div>
                 <div id="difference-chart"></div>
             </div>
@@ -718,17 +77,44 @@
                             <th><input type="text" id="filter-team2" placeholder="Filter player..."></th>
                             <th><input type="text" id="filter-type" placeholder="Filter type..."></th>
                             <th><input type="text" id="filter-action" placeholder="Filter action..."></th>
+                            <th><input type="text" id="filter-winner" placeholder="Filter winner..."></th>
                         </tr>
                         <tr class="header-row">
-                            <th><span class="filter-indicator" id="filter-indicator-time"></span>Time</th>
-                            <th><span class="filter-indicator" id="filter-indicator-team1"></span><span
-                                    id="team1-header"></span></th>
-                            <th colspan="2" style="text-align: center;"><span class="filter-indicator"
-                                    id="filter-indicator-score"></span>Score</th>
-                            <th><span class="filter-indicator" id="filter-indicator-team2"></span><span
-                                    id="team2-header"></span></th>
-                            <th><span class="filter-indicator" id="filter-indicator-type"></span>Type</th>
-                            <th><span class="filter-indicator" id="filter-indicator-action"></span>Action</th>
+                            <th>
+                                <span class="filter-indicator" id="filter-indicator-time"></span>
+                                <span class="filter-clear" id="filter-clear-time">×</span>
+                                Time
+                            </th>
+                            <th>
+                                <span class="filter-indicator" id="filter-indicator-team1"></span>
+                                <span class="filter-clear" id="filter-clear-team1">×</span>
+                                <span id="team1-header"></span>
+                            </th>
+                            <th colspan="2" style="text-align: center;">
+                                <span class="filter-indicator" id="filter-indicator-score"></span>
+                                <span class="filter-clear" id="filter-clear-score">×</span>
+                                Score
+                            </th>
+                            <th>
+                                <span class="filter-indicator" id="filter-indicator-team2"></span>
+                                <span class="filter-clear" id="filter-clear-team2">×</span>
+                                <span id="team2-header"></span>
+                            </th>
+                            <th>
+                                <span class="filter-indicator" id="filter-indicator-type"></span>
+                                <span class="filter-clear" id="filter-clear-type">×</span>
+                                Type
+                            </th>
+                            <th>
+                                <span class="filter-indicator" id="filter-indicator-action"></span>
+                                <span class="filter-clear" id="filter-clear-action">×</span>
+                                Action
+                            </th>
+                            <th>
+                                <span class="filter-indicator" id="filter-indicator-winner"></span>
+                                <span class="filter-clear" id="filter-clear-winner">×</span>
+                                Win
+                            </th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -751,53 +137,70 @@
             return matchStartEntry ? matchStartEntry.time : '1:24:33';
         }
 
-        // Convert timestamp to minutes from match start
-        function timeToMinutes(timeStr) {
-            const [h, m, s] = timeStr.split(':').map(Number);
-            const totalSeconds = h * 3600 + m * 60 + s;
-
+        // Process and cache all time calculations
+        function preprocessTimeData(data) {
             const matchStartTime = getMatchStartTime();
             const [startH, startM, startS] = matchStartTime.split(':').map(Number);
             const startTotalSeconds = startH * 3600 + startM * 60 + startS;
 
-            return (totalSeconds - startTotalSeconds) / 60;
+            return data.map(d => {
+                // Parse current time
+                const [h, m, s] = d.time.split(':').map(Number);
+                const totalSeconds = h * 3600 + m * 60 + s;
+
+                // Calculate match time in minutes
+                const matchTimeMinutes = (totalSeconds - startTotalSeconds) / 60;
+
+                // Calculate bout time in minutes
+                let boutTimeMinutes = 0;
+                if (!d.isMatchStart) {
+                    const totalBoutSeconds = d.bout * (d.isSuddenDeath ? (1 + (d.bout - 1) * 3) / d.bout : 3) * 60;
+                    const [boutMins, boutSecs] = d.boutTime.split(':').map(Number);
+                    const remainingSeconds = boutMins * 60 + boutSecs;
+                    const elapsedSeconds = totalBoutSeconds - remainingSeconds;
+                    boutTimeMinutes = elapsedSeconds / 60;
+                }
+
+                return {
+                    ...d,
+                    matchTimeMinutes,
+                    boutTimeMinutes,
+                    // Cache formatted strings for display
+                    matchTimeDisplay: formatTime(matchTimeMinutes, 'table'),
+                    boutTimeDisplay: formatTime(boutTimeMinutes, 'bout'),
+                    matchTimeChart: formatTime(matchTimeMinutes, 'chart')
+                };
+            });
+        }
+
+        // Unified time formatting function
+        function formatTime(minutes, format) {
+            switch (format) {
+                case 'chart':
+                    return Math.round(minutes).toString();
+                case 'table':
+                    const totalSeconds = Math.round(minutes * 60);
+                    const mins = Math.floor(totalSeconds / 60);
+                    const secs = totalSeconds % 60;
+                    return `${mins}:${secs.toString().padStart(2, '0')}`;
+                case 'bout':
+                    const boutSeconds = Math.round(minutes * 60);
+                    const boutMins = Math.floor(boutSeconds / 60);
+                    const boutSecsRemainder = boutSeconds % 60;
+                    return `${boutMins}:${boutSecsRemainder.toString().padStart(2, '0')}`;
+                default:
+                    return minutes.toString();
+            }
+        }
+
+        // Get effective time based on current mode
+        function getEffectiveTime(dataPoint, isMatchTimeMode) {
+            return isMatchTimeMode ? dataPoint.matchTimeMinutes : dataPoint.boutTimeMinutes;
         }
 
         // Format relative time for display
         function formatRelativeTime(minutes) {
             return Math.round(minutes).toString();
-        }
-
-        // Format relative time for table display (full format)
-        function formatRelativeTimeTable(minutes) {
-            const totalSeconds = Math.round(minutes * 60);
-            const mins = Math.floor(totalSeconds / 60);
-            const secs = totalSeconds % 60;
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        function calculateElapsedBoutTime(bout, boutTime, suddenDeath) {
-            const totalBoutSeconds = bout * (suddenDeath ? (1 + (bout - 1) * 3) / bout : 3) * 60;
-            const [minutes, seconds] = boutTime.split(':').map(Number);
-            const remainingSeconds = minutes * 60 + seconds;
-            const elapsedSeconds = totalBoutSeconds - remainingSeconds;
-
-            const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-            const elapsedSecondsRemainder = elapsedSeconds % 60;
-            return `${elapsedMinutes}:${elapsedSecondsRemainder.toString().padStart(2, '0')}`;
-        }
-
-        function timeToEffectiveMinutes(timeStr, bout, boutTime, isMatchTimeMode, suddenDeath) {
-            if (isMatchTimeMode) {
-                return timeToMinutes(timeStr);
-            } else {
-                // Calculate effective bout time in minutes
-                const totalBoutSeconds = bout * (suddenDeath ? (1 + (bout - 1) * 3) / bout : 3) * 60;
-                const [minutes, seconds] = boutTime.split(':').map(Number);
-                const remainingSeconds = minutes * 60 + seconds;
-                const elapsedSeconds = totalBoutSeconds - remainingSeconds;
-                return elapsedSeconds / 60;
-            }
         }
 
         // Determine point winners
@@ -812,12 +215,13 @@
         }
 
         // Process data
-        const plotData = matchData.filter(d => !d.isFencerChange);
-        const fencerChanges = matchData.filter(d => d.isFencerChange);
-        const matchStart = matchData.find(d => d.isMatchStart);
+        const processedMatchData = preprocessTimeData(matchData);
+        const plotData = processedMatchData.filter(d => !d.isFencerChange && !d.isEnd);
+        const fencerChanges = processedMatchData.filter(d => d.isFencerChange);
+        const matchStart = processedMatchData.find(d => d.isMatchStart);
 
         // Determine winners for all data
-        determineWinners(matchData);
+        determineWinners(processedMatchData);
 
         // Determine final winner for difference calculation
         const finalPoint = plotData[plotData.length - 1];
@@ -828,22 +232,74 @@
             const chartContainer = document.getElementById('chart');
             const mainChartContainer = document.getElementById('main-chart');
             const differenceChartContainer = document.getElementById('difference-chart');
+            const fencerChartContainer = document.getElementById('fencer-chart');
 
             const containerRect = chartContainer.getBoundingClientRect();
 
-            const margin = { top: 0, right: 25, bottom: 30, left: 25 };
+            const margin = { top: 0, right: 20, bottom: 18, left: 22 };
             const totalWidth = containerRect.width - margin.left - margin.right;
             const totalHeight = containerRect.height;
 
+            // Generate colors for fencers
+            function generateFencerColors() {
+                const warmColors = [
+                    'rgba(164, 66, 0, 1)',   // Brown
+                    'rgba(213, 137, 54, 1)', // Bronze
+                    'rgba(250, 255, 129, 1)',// Icterine
+                    'rgba(255, 163, 175, 1)',// Salmon Pink
+                    'rgba(254, 100, 163, 1)' // Cyclamen
+                ];
+
+                const coldColors = [
+                    'rgba(84, 198, 235, 1)',   // vivid-sky-blue
+                    'rgba(6, 214, 160, 1)',   // emerald
+                    'rgba(55, 100, 108, 1)',// caribbean-current
+                    'rgba(58, 0, 204, 1)',   // chrysler-blue
+                    'rgba(64, 109, 181, 1)' // true-blue
+                ];
+
+                const allFencers = [...new Set([...plotData.map(d => d.team1Player), ...plotData.map(d => d.team2Player)])];
+                const fencerColors = new Map();
+
+                let team1Count = 0;
+                let team2Count = 0;
+
+                allFencers.forEach(fencer => {
+                    const firstAppearance = plotData.find(p => p.team1Player === fencer || p.team2Player === fencer);
+                    if (firstAppearance && firstAppearance.team1Player === fencer) {
+                        fencerColors.set(fencer, warmColors[team1Count % warmColors.length]);
+                        team1Count++;
+                    } else {
+                        fencerColors.set(fencer, coldColors[team2Count % coldColors.length]);
+                        team2Count++;
+                    }
+                });
+
+                return fencerColors;
+            }
+
             // Check if difference chart is enabled
             const isDiffEnabled = document.getElementById('diff-toggle').checked;
-            let isMatchTimeMode = document.getElementById('time-toggle').checked;;
+            const isFencerEnabled = document.getElementById('fencer-toggle').checked;
+            const isMatchTimeMode = document.getElementById('time-toggle').checked;
 
-            let mainChartHeight, differenceChartHeight;
-            if (isDiffEnabled) {
-                mainChartHeight = totalHeight * 0.85 - margin.top - margin.bottom;
-                differenceChartHeight = totalHeight * 0.15 - 10; // 10px for border
+            let mainChartHeight, differenceChartHeight, fencerChartHeight;
+
+            if (isDiffEnabled && isFencerEnabled) {
+                fencerChartHeight = totalHeight * 0.04;
+                mainChartHeight = totalHeight * 0.85 - fencerChartHeight - margin.top - margin.bottom - 4;
+                differenceChartHeight = totalHeight - fencerChartHeight - mainChartHeight - margin.top - margin.bottom - 14;
+            } else if (isDiffEnabled) {
+                fencerChartHeight = 0;
+                mainChartHeight = totalHeight * 0.85 - fencerChartHeight - margin.top - margin.bottom;
+                differenceChartHeight = totalHeight - fencerChartHeight - mainChartHeight - margin.top - margin.bottom - 10;
+                console.log("OFF", totalHeight);
+            } else if (isFencerEnabled) {
+                fencerChartHeight = totalHeight * 0.04;
+                mainChartHeight = totalHeight - fencerChartHeight - margin.top - margin.bottom - 10;
+                differenceChartHeight = 0;
             } else {
+                fencerChartHeight = 0;
                 mainChartHeight = totalHeight - margin.top - margin.bottom;
                 differenceChartHeight = 0;
             }
@@ -851,9 +307,11 @@
             // Clear existing charts
             d3.select('#main-chart svg').remove();
             d3.select('#difference-chart svg').remove();
+            d3.select('#fencer-chart svg').remove();
 
             // Hide/show difference chart container
             differenceChartContainer.style.display = isDiffEnabled ? 'block' : 'none';
+            fencerChartContainer.style.display = isFencerEnabled ? 'block' : 'none';
 
             // Create main chart SVG
             const mainSvg = d3.select('#main-chart')
@@ -878,12 +336,12 @@
                 .style('position', 'absolute')
                 .style('pointer-events', 'none')
                 .style('opacity', 0)
-                .style('z-index', 1000);
-
+                .style('z-index', 1000)
+                .style('transform', `translate(0px, ${fencerChartHeight + 2}px)`);
 
             // Scales
 
-            const maxTime = Math.max(...plotData.map(d => timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath))) + 1;
+            const maxTime = Math.max(...plotData.map(d => getEffectiveTime(d, isMatchTimeMode))) + 1;
 
             const x = d3.scaleLinear()
                 .domain([0, maxTime])
@@ -955,7 +413,7 @@
                     .data(fencerChanges)
                     .enter().append('rect')
                     .attr('class', 'fencer-change-area')
-                    .attr('x', d => x(timeToMinutes(d.time)))
+                    .attr('x', d => x(getEffectiveTime(d, isMatchTimeMode)))
                     .attr('width', d => x(d.changeDuration))
                     .attr('y', 0)
                     .attr('height', mainChartHeight)
@@ -968,8 +426,8 @@
                     .data(fencerChanges)
                     .enter().append('line')
                     .attr('class', 'fencer-change-line')
-                    .attr('x1', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
-                    .attr('x2', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
+                    .attr('x1', d => x(getEffectiveTime(d, isMatchTimeMode)))
+                    .attr('x2', d => x(getEffectiveTime(d, isMatchTimeMode)))
                     .attr('y1', 0)
                     .attr('y2', mainChartHeight)
                     .style('pointer-events', 'none')
@@ -984,7 +442,7 @@
                         .data(fencerChanges)
                         .enter().append('rect')
                         .attr('class', 'fencer-change-area')
-                        .attr('x', d => x(timeToMinutes(d.time)))
+                        .attr('x', d => x(getEffectiveTime(d, isMatchTimeMode)))
                         .attr('width', d => x(d.changeDuration))
                         .attr('y', 0)
                         .attr('height', differenceChartHeight)
@@ -996,8 +454,8 @@
                         .data(fencerChanges)
                         .enter().append('line')
                         .attr('class', 'fencer-change-line')
-                        .attr('x1', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
-                        .attr('x2', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
+                        .attr('x1', d => x(getEffectiveTime(d, isMatchTimeMode)))
+                        .attr('x2', d => x(getEffectiveTime(d, isMatchTimeMode)))
                         .attr('y1', 0)
                         .attr('y2', differenceChartHeight)
                         .on('click', (event, d) => {
@@ -1033,7 +491,7 @@
                 .datum(team1LineData)
                 .attr('class', 'line team1-line')
                 .attr('d', d3.line()
-                    .x(d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
+                    .x(d => x(getEffectiveTime(d, isMatchTimeMode)))
                     .y(d => y(d.team1Score))
                     .curve(d3.curveStepAfter)
                 );
@@ -1042,7 +500,7 @@
                 .datum(team2LineData)
                 .attr('class', 'line team2-line')
                 .attr('d', d3.line()
-                    .x(d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
+                    .x(d => x(getEffectiveTime(d, isMatchTimeMode)))
                     .y(d => y(d.team2Score))
                     .curve(d3.curveStepAfter)
                 );
@@ -1084,13 +542,13 @@
 
                 // Add difference area
                 const areaPositive = d3.area()
-                    .x(d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
+                    .x(d => x(getEffectiveTime(d, isMatchTimeMode)))
                     .y0(yDiff(0))
                     .y1(d => yDiff(d.winnerAdvantage))
                     .curve(d3.curveStepAfter);
 
                 const areaNegative = d3.area()
-                    .x(d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)))
+                    .x(d => x(getEffectiveTime(d, isMatchTimeMode)))
                     .y0(yDiff(0))
                     .y1(d => yDiff(-d.loserAdvantage))
                     .curve(d3.curveStepAfter);
@@ -1117,7 +575,7 @@
                 .data(scoreChangesTeam1)
                 .enter().append('rect')
                 .attr('class', 'point team1-point')
-                .attr('x', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)) - 2.5)
+                .attr('x', d => x(getEffectiveTime(d, isMatchTimeMode)) - 2.5)
                 .attr('y', d => y(d.team1Score) - 4)
                 .attr('width', 6)
                 .attr('height', 9)
@@ -1133,7 +591,7 @@
                 .data(scoreChangesTeam2)
                 .enter().append('rect')
                 .attr('class', 'point team2-point')
-                .attr('x', d => x(timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)) - 2.5)
+                .attr('x', d => x(getEffectiveTime(d, isMatchTimeMode)) - 2.5)
                 .attr('y', d => y(d.team2Score) - 4)
                 .attr('width', 6)
                 .attr('height', 9)
@@ -1143,6 +601,170 @@
                 .on('click', (event, d) => {
                     highlightTableRow(d);
                 });
+
+            // Create fencer chart SVG only if enabled
+            let fencerSvg;
+            if (isFencerEnabled) {
+                const fencerColors = generateFencerColors();
+
+                fencerSvg = d3.select('#fencer-chart')
+                    .append('svg')
+                    .attr('width', totalWidth + margin.left + margin.right)
+                    .attr('height', fencerChartHeight)
+                    .append('g')
+                    .attr('transform', `translate(${margin.left},0)`);
+
+                // Separate fencers by team
+                const team1Fencers = [...new Set(plotData.map(d => d.team1Player))];
+                const team2Fencers = [...new Set(plotData.map(d => d.team2Player))];
+                const allFencers = [...team1Fencers, ...team2Fencers];
+
+                const fencerHeight = fencerChartHeight / allFencers.length;
+
+                // Add team separator line
+                const separatorY = team1Fencers.length * fencerHeight;
+                fencerSvg.append('line')
+                    .attr('class', 'team-separator')
+                    .attr('x1', 0)
+                    .attr('x2', totalWidth)
+                    .attr('y1', separatorY)
+                    .attr('y2', separatorY)
+                    .style('stroke', `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--border-light')}, 0.1)`)
+                    .style('stroke-width', 1);
+
+                // Function to get initials
+                function getInitials(name) {
+                    const words = name.trim().split(/\s+/);
+                    if (words.length >= 2) {
+                        return words[0].charAt(0).toUpperCase() + words[1].charAt(0).toUpperCase();
+                    }
+                    return words[0].charAt(0).toUpperCase();
+                }
+
+
+                allFencers.forEach((fencer, index) => {
+                    const fencerData = [];
+                    let firstAppearanceTime = null;
+
+                    // Get all events sorted by time
+                    const allEvents = [...processedMatchData.filter(d => !d.isEnd)].sort((a, b) =>
+                        getEffectiveTime(a, isMatchTimeMode) - getEffectiveTime(b, isMatchTimeMode)
+                    );
+
+                    let currentStart = null;
+                    let currentTeam1Player = null;
+                    let currentTeam2Player = null;
+
+                    // Initialize with match start
+                    const matchStartEvent = allEvents.find(e => e.isMatchStart);
+                    if (matchStartEvent) {
+                        currentTeam1Player = matchStartEvent.team1Player;
+                        currentTeam2Player = matchStartEvent.team2Player;
+
+                        if (fencer === currentTeam1Player || fencer === currentTeam2Player) {
+                            currentStart = getEffectiveTime(matchStartEvent, isMatchTimeMode);
+                        }
+                    }
+
+                    // Process events
+                    allEvents.forEach(event => {
+                        const eventTime = getEffectiveTime(event, isMatchTimeMode);
+
+                        if (event.isFencerChange) {
+                            // End current period if this fencer was active
+                            if (currentStart !== null && (fencer === currentTeam1Player || fencer === currentTeam2Player)) {
+                                fencerData.push({ start: currentStart, end: eventTime, fencer });
+                                currentStart = null;
+                            }
+
+                            // Update to new players (the ones listed in the fencer change event are the NEW players)
+                            // Find the next non-fencer-change event to get the new players
+                            const nextEventIndex = allEvents.indexOf(event) + 1;
+                            if (nextEventIndex < allEvents.length) {
+                                const nextEvent = allEvents[nextEventIndex];
+                                currentTeam1Player = nextEvent.team1Player;
+                                currentTeam2Player = nextEvent.team2Player;
+                            }
+
+                            // Check if this fencer becomes active
+                            if (fencer === currentTeam1Player || fencer === currentTeam2Player) {
+                                currentStart = eventTime;
+                            }
+                        }
+                    });
+
+                    // Handle the final segment
+                    if (currentStart !== null) {
+                        const lastEvent = allEvents[allEvents.length - 1];
+                        const lastTime = getEffectiveTime(lastEvent, isMatchTimeMode);
+                        fencerData.push({ start: currentStart, end: lastTime, fencer });
+                    }
+
+                    // Draw fencer activity rectangles
+                    fencerSvg.selectAll(`.fencer-activity-${index}`)
+                        .data(fencerData)
+                        .enter().append('rect')
+                        .attr('class', `fencer-activity fencer-activity-${index}`)
+                        .attr('x', d => x(d.start))
+                        .attr('width', d => Math.max(1, x(d.end) - x(d.start)))
+                        .attr('y', index * fencerHeight)
+                        .attr('height', fencerHeight - 0.2)
+                        .attr('fill', fencerColors.get(fencer));
+
+                    // Add initials label at first appearance
+                    if (fencerData.length > 0) {
+                        firstAppearanceTime = fencerData[0].start;
+
+                        fencerSvg.append('text')
+                            .attr('class', 'fencer-initials')
+                            .attr('x', x(firstAppearanceTime) + 2)
+                            .attr('y', index * fencerHeight + fencerHeight / 2)
+                            .attr('dy', '0.35em')
+                            .style('font-size', '6px')
+                            .style('font-weight', 'bold')
+                            .style('fill', 'black')
+                            .style('text-shadow', '1px 1px 1px rgba(255,255,255,0.9)')
+                            .style('pointer-events', 'none')
+                            .text(getInitials(fencer));
+                    }
+
+                });
+
+                // Add fencer change lines to fencer chart
+                if (isMatchTimeMode) {
+                    fencerSvg.selectAll('.fencer-change-area-fencer')
+                        .data(fencerChanges)
+                        .enter().append('rect')
+                        .attr('class', 'fencer-change-area fencer-change-area-fencer')
+                        .attr('x', d => x(getEffectiveTime(d, isMatchTimeMode)))
+                        .attr('width', d => x(d.changeDuration))
+                        .attr('y', 0)
+                        .attr('height', fencerChartHeight)
+                        .on('click', (event, d) => {
+                            highlightTableRow(d);
+                        });
+                } else {
+                    fencerSvg.selectAll('.fencer-change-line-fencer')
+                        .data(fencerChanges)
+                        .enter().append('line')
+                        .attr('class', 'fencer-change-line fencer-change-line-fencer')
+                        .attr('x1', d => x(getEffectiveTime(d, isMatchTimeMode)))
+                        .attr('x2', d => x(getEffectiveTime(d, isMatchTimeMode)))
+                        .attr('y1', 0)
+                        .attr('y2', fencerChartHeight)
+                        .on('click', (event, d) => {
+                            highlightTableRow(d);
+                        });
+                }
+
+                // Add match start line to fencer chart
+                fencerSvg.append('line')
+                    .attr('class', 'match-start-line')
+                    .attr('x1', x(0))
+                    .attr('x2', x(0))
+                    .attr('y1', 0)
+                    .attr('y2', fencerChartHeight);
+            }
 
             const mouseOverlay = d3.select('#chart-container')
                 .append('div')
@@ -1172,17 +794,19 @@
 
                     // Find closest data point
                     const allDataPoints = [...plotData, ...fencerChanges].sort((a, b) =>
-                        timeToEffectiveMinutes(a.time, a.bout, a.boutTime, isMatchTimeMode, a.isSuddenDeath) -
-                        timeToEffectiveMinutes(b.time, b.bout, b.boutTime, isMatchTimeMode, b.isSuddenDeath)
+                        getEffectiveTime(a, isMatchTimeMode) -
+                        getEffectiveTime(b, isMatchTimeMode)
+                        // timeToEffectiveMinutes(a.time, a.bout, a.boutTime, isMatchTimeMode, a.isSuddenDeath) -
+                        // timeToEffectiveMinutes(b.time, b.bout, b.boutTime, isMatchTimeMode, b.isSuddenDeath)
                     );
-                    const bisect = d3.bisector(d => timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)).left;
+                    const bisect = d3.bisector(d => getEffectiveTime(d, isMatchTimeMode)).left;
                     const index = bisect(allDataPoints, timeValue);
                     const d0 = allDataPoints[index - 1];
                     const d1 = allDataPoints[index];
-                    const d = d1 && d0 && (timeValue - timeToEffectiveMinutes(d0.time, d0.bout, d0.boutTime, isMatchTimeMode, d0.isSuddenDeath) > timeToEffectiveMinutes(d1.time, d1.bout, d1.boutTime, isMatchTimeMode, d1.isSuddenDeath) - timeValue) ? d1 : d0;
+                    const d = d1 && d0 && (timeValue - getEffectiveTime(d0, isMatchTimeMode) > getEffectiveTime(d1, isMatchTimeMode) - timeValue) ? d1 : d0;
 
                     if (d) {
-                        const displayTime = isMatchTimeMode ? formatRelativeTimeTable(timeToMinutes(d.time)) : calculateElapsedBoutTime(d.bout, d.boutTime, d.isSuddenDeath);
+                        const displayTime = isMatchTimeMode ? d.matchTimeDisplay : d.boutTimeDisplay;
                         const scoreDiff = Math.abs(d.team1Score - d.team2Score);
 
                         // Always clear all highlights first
@@ -1201,22 +825,22 @@
                             d3.selectAll('.fencer-change-area')
                                 .filter(change => change.time === d.time)
                                 .classed('fencer-change-area-highlighted', true);
-                            
+
                             // Highlight fencer change lines
                             d3.selectAll('.fencer-change-line')
                                 .filter(change => change.time === d.time)
                                 .classed('fencer-change-line-highlighted', true);
                         } else {
                             // Apply highlight to scoring points
-                        if (d.team1Won) {
-                            d3.selectAll('.team1-point')
-                                .filter(point => point.time === d.time)
-                                .classed('point-highlighted', true);
-                        }
-                        if (d.team2Won) {
-                            d3.selectAll('.team2-point')
-                                .filter(point => point.time === d.time)
-                                .classed('point-highlighted', true);
+                            if (d.team1Won) {
+                                d3.selectAll('.team1-point')
+                                    .filter(point => point.time === d.time)
+                                    .classed('point-highlighted', true);
+                            }
+                            if (d.team2Won) {
+                                d3.selectAll('.team2-point')
+                                    .filter(point => point.time === d.time)
+                                    .classed('point-highlighted', true);
                             }
                         }
 
@@ -1246,14 +870,16 @@
 
                     // Find closest data point for click
                     const allDataPoints = [...plotData, ...fencerChanges].sort((a, b) =>
-                        timeToEffectiveMinutes(a.time, a.bout, a.boutTime, isMatchTimeMode, a.isSuddenDeath) -
-                        timeToEffectiveMinutes(b.time, b.bout, b.boutTime, isMatchTimeMode, b.isSuddenDeath)
+                        getEffectiveTime(a, isMatchTimeMode) -
+                        getEffectiveTime(b, isMatchTimeMode)
+                        // timeToEffectiveMinutes(a.time, a.bout, a.boutTime, isMatchTimeMode, a.isSuddenDeath) -
+                        // timeToEffectiveMinutes(b.time, b.bout, b.boutTime, isMatchTimeMode, b.isSuddenDeath)
                     );
-                    const bisect = d3.bisector(d => timeToEffectiveMinutes(d.time, d.bout, d.boutTime, isMatchTimeMode, d.isSuddenDeath)).left;
+                    const bisect = d3.bisector(d => getEffectiveTime(d, isMatchTimeMode)).left;
                     const index = bisect(allDataPoints, timeValue);
                     const d0 = allDataPoints[index - 1];
                     const d1 = allDataPoints[index];
-                    const d = d1 && d0 && (timeValue - timeToEffectiveMinutes(d0.time, d0.bout, d0.boutTime, isMatchTimeMode, d0.isSuddenDeath) > timeToEffectiveMinutes(d1.time, d1.bout, d1.boutTime, isMatchTimeMode, d1.isSuddenDeath) - timeValue) ? d1 : d0;
+                    const d = d1 && d0 && (timeValue - getEffectiveTime(d0, isMatchTimeMode) > getEffectiveTime(d1, isMatchTimeMode) - timeValue) ? d1 : d0;
 
                     if (d) {
                         highlightTableRow(d);
@@ -1267,7 +893,7 @@
             // Add legend
             const legend = mainSvg.append('g')
                 .attr('class', 'legend')
-                .attr('transform', `translate(${totalWidth - 100}, ${totalHeight - differenceChartHeight - 80})`);
+                .attr('transform', `translate(${totalWidth - 100}, ${totalHeight - differenceChartHeight - fencerChartHeight * 1.15 - 70})`);
 
             const legendItems = [
                 { color: `rgba(${getComputedStyle(document.documentElement).getPropertyValue('--primary-blue')}, 1)`, label: TEAMS.team1.name },
@@ -1372,10 +998,27 @@
                 matchingRectangles.classed('fencer-change-area-highlighted', true);
                 matchingLines.classed('fencer-change-line-highlighted', true);
 
+                // Also highlight in fencer chart
+                d3.selectAll('.fencer-change-area-fencer')
+                    .filter(function () {
+                        const rectData = d3.select(this).datum();
+                        return rectData && rectData.time === d.time;
+                    })
+                    .classed('fencer-change-area-highlighted', true);
+
+                d3.selectAll('.fencer-change-line-fencer')
+                    .filter(function () {
+                        const lineData = d3.select(this).datum();
+                        return lineData && lineData.time === d.time;
+                    })
+                    .classed('fencer-change-line-highlighted', true);
+
                 // Fade out over time
                 setTimeout(() => {
                     matchingRectangles.classed('fencer-change-area-fade', true);
                     matchingLines.classed('fencer-change-line-fade', true);
+                    d3.selectAll('.fencer-change-area-fencer').classed('fencer-change-area-fade', true);
+                    d3.selectAll('.fencer-change-line-fencer').classed('fencer-change-line-fade', true);
                 }, 90);
 
                 // Clean up classes after transition
@@ -1415,6 +1058,16 @@
         // Initialize page elements
         initializePageElements();
 
+        const FILTER_CONFIG = [
+            { filterIds: ['filter-time'], indicator: 'filter-indicator-time', clear: 'filter-clear-time' },
+            { filterIds: ['filter-team1'], indicator: 'filter-indicator-team1', clear: 'filter-clear-team1' },
+            { filterIds: ['filter-score1', 'filter-score2'], indicator: 'filter-indicator-score', clear: 'filter-clear-score' },
+            { filterIds: ['filter-team2'], indicator: 'filter-indicator-team2', clear: 'filter-clear-team2' },
+            { filterIds: ['filter-type'], indicator: 'filter-indicator-type', clear: 'filter-clear-type' },
+            { filterIds: ['filter-action'], indicator: 'filter-indicator-action', clear: 'filter-clear-action' },
+            { filterIds: ['filter-winner'], indicator: 'filter-indicator-winner', clear: 'filter-clear-winner' }
+        ];
+
         function applyFilters() {
             const filters = {
                 time: document.getElementById('filter-time').value.toLowerCase(),
@@ -1423,8 +1076,16 @@
                 score2: document.getElementById('filter-score2').value.toLowerCase(),
                 team2: document.getElementById('filter-team2').value.toLowerCase(),
                 type: document.getElementById('filter-type').value.toLowerCase(),
-                action: document.getElementById('filter-action').value.toLowerCase()
+                action: document.getElementById('filter-action').value.toLowerCase(),
+                winner: document.getElementById('filter-winner').value.toLowerCase()
             };
+
+            // Helper function to check if text matches filter (supports OR with |)
+            function matchesFilter(text, filter) {
+                if (!filter) return true;
+                const terms = filter.split('|').map(term => term.trim());
+                return terms.some(term => text.includes(term));
+            }
 
             const tableRows = document.querySelectorAll('#score-table tbody tr');
             const visibleDataTimes = new Set();
@@ -1432,7 +1093,7 @@
 
             tableRows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length < 6) return;
+                if (cells.length < 8) return;
 
                 const timeText = cells[0].textContent.toLowerCase();
                 const team1Text = cells[1].textContent.toLowerCase();
@@ -1441,15 +1102,17 @@
                 const team2Text = cells[4].textContent.toLowerCase();
                 const typeText = cells[5].textContent.toLowerCase();
                 const actionText = cells[6].textContent.toLowerCase();
+                const winnerText = cells[7].textContent.toLowerCase();
 
                 const matches =
-                    (!filters.time || timeText.includes(filters.time)) &&
-                    (!filters.team1 || team1Text.includes(filters.team1)) &&
-                    (!filters.score1 || score1Text.includes(filters.score1)) &&
-                    (!filters.score2 || score2Text.includes(filters.score2)) &&
-                    (!filters.team2 || team2Text.includes(filters.team2)) &&
-                    (!filters.type || typeText.includes(filters.type)) &&
-                    (!filters.action || actionText.includes(filters.action));
+                    matchesFilter(timeText, filters.time) &&
+                    matchesFilter(team1Text, filters.team1) &&
+                    matchesFilter(score1Text, filters.score1) &&
+                    matchesFilter(score2Text, filters.score2) &&
+                    matchesFilter(team2Text, filters.team2) &&
+                    matchesFilter(typeText, filters.type) &&
+                    matchesFilter(actionText, filters.action) &&
+                    matchesFilter(winnerText, filters.winner);
 
                 row.style.display = matches ? '' : 'none';
                 if (matches) {
@@ -1494,7 +1157,9 @@
         // Create table
         const table = d3.select('#score-table tbody');
 
-        matchData.forEach(d => {
+        matchData.forEach((d, i) => {
+            const processedD = processedMatchData[i];
+
             const row = table.append('tr');
             if (d.isFencerChange) {
                 row.attr('class', 'fencer-change-row');
@@ -1506,7 +1171,7 @@
             row.on('click', function (event) {
                 // Don't trigger if clicking on the link
                 if (event.target.tagName !== 'A') {
-                    highlightChartPoint(d);
+                    highlightChartPoint(processedD);
 
                     // Highlight this table row with feedback
                     const currentRow = this;
@@ -1518,9 +1183,9 @@
                     let highlightClass;
                     if (d.type === 'D') {
                         highlightClass = 'row-highlight-neutral';
-                    } else if (d.team1Won) {
+                    } else if (processedD.team1Won) {
                         highlightClass = 'row-highlight-team1';
-                    } else if (d.team2Won) {
+                    } else if (processedD.team2Won) {
                         highlightClass = 'row-highlight-team2';
                     } else {
                         highlightClass = 'row-highlight-neutral';
@@ -1543,39 +1208,40 @@
             });
 
             const timeCell = row.append('td');
-            timeCell.append('span').text('BT: ' + calculateElapsedBoutTime(d.bout, d.boutTime, d.isSuddenDeath));
+            timeCell.append('span').text('BT: ' + (processedD.boutTimeDisplay || '0:00'));
             timeCell.append('br');
-            timeCell.append('span').text('MT: ' + formatRelativeTimeTable(timeToMinutes(d.time)));
+            timeCell.append('span').text('MT: ' + (processedD.matchTimeDisplay || '0:00'));
             timeCell.append('br');
             timeCell.append('a')
-                .attr('href', `https://youtu.be/IpekOpvrhqE?t=${d.linkTime.split(':').reduce((acc, time) => (60 * acc) + +time)}`)
+                // .attr('href', `https://youtu.be/IpekOpvrhqE?t=${d.linkTime.split(':').reduce((acc, time) => (60 * acc) + +time)}`)
+                .attr('href', `${TEAMS.ytlink}${d.linkTime.split(':').reduce((acc, time) => (60 * acc) + +time)}`)
                 .attr('target', '_blank')
                 .text('▶: ' + d.time);
 
             // Team 1 Player - bold if they won the point
             const team1PlayerCell = row.append('td');
-            if (d.team1Won) {
+            if (processedD.team1Won) {
                 team1PlayerCell.attr('class', 'point-winner');
             }
             team1PlayerCell.text(d.team1Player);
 
             // Team 1 Score - bold if they won the point
             const team1ScoreCell = row.append('td');
-            if (d.team1Won) {
+            if (processedD.team1Won) {
                 team1ScoreCell.attr('class', 'point-winner');
             }
             team1ScoreCell.text(d.team1Score);
 
             // Team 2 Score - bold if they won the point
             const team2ScoreCell = row.append('td');
-            if (d.team2Won) {
+            if (processedD.team2Won) {
                 team2ScoreCell.attr('class', 'point-winner');
             }
             team2ScoreCell.text(d.team2Score);
 
             // Team 2 Player - bold if they won the point
             const team2PlayerCell = row.append('td');
-            if (d.team2Won) {
+            if (processedD.team2Won) {
                 team2PlayerCell.attr('class', 'point-winner');
             }
             team2PlayerCell.text(d.team2Player);
@@ -1583,6 +1249,19 @@
             row.append('td').text(d.type);
 
             row.append('td').text(d.action);
+
+            const winnerCell = row.append('td');
+            let winnerText = '';
+            if (processedD.type === 'D') {
+                winnerText = 'D';
+            } else if (processedD.team1Won) {
+                winnerText = TEAMS.team1.code;
+            } else if (processedD.team2Won) {
+                winnerText = TEAMS.team2.code;
+            } else {
+                winnerText = '';
+            }
+            winnerCell.text(winnerText);
         });
 
         let lastScrollTop = 0;
@@ -1590,48 +1269,48 @@
         const filterRow = document.querySelector('.filter-row');
 
         function hasActiveFilters() {
-            const filters = [
-                'filter-time', 'filter-team1', 'filter-score1',
-                'filter-score2', 'filter-team2', 'filter-type', 'filter-action'
-            ];
-            return filters.some(id => document.getElementById(id).value.trim() !== '');
+            return FILTER_CONFIG.some(config =>
+                config.filterIds.some(id => document.getElementById(id).value.trim() !== '')
+            );
         }
 
         function updateFilterIndicator() {
-            const filters = [
-                { id: 'filter-time', indicator: 'filter-indicator-time' },
-                { id: 'filter-team1', indicator: 'filter-indicator-team1' },
-                { id: 'filter-score1', indicator: 'filter-indicator-score' },
-                { id: 'filter-score2', indicator: 'filter-indicator-score' },
-                { id: 'filter-team2', indicator: 'filter-indicator-team2' },
-                { id: 'filter-type', indicator: 'filter-indicator-type' },
-                { id: 'filter-action', indicator: 'filter-indicator-action' }
-            ];
+            FILTER_CONFIG.forEach(config => {
+                const indicator = document.getElementById(config.indicator);
+                const clearButton = document.getElementById(config.clear);
 
-            // Group filters by indicator to handle multiple filters per indicator
-            const indicatorGroups = {};
-            filters.forEach(filter => {
-                if (!indicatorGroups[filter.indicator]) {
-                    indicatorGroups[filter.indicator] = [];
-                }
-                indicatorGroups[filter.indicator].push(filter.id);
-            });
-
-            Object.entries(indicatorGroups).forEach(([indicatorId, filterIds]) => {
-                const indicator = document.getElementById(indicatorId);
-                if (indicator) {
-                    const hasActiveFilter = filterIds.some(filterId => {
+                if (indicator && clearButton) {
+                    const hasActiveFilter = config.filterIds.some(filterId => {
                         const input = document.getElementById(filterId);
                         return input && input.value.trim() !== '';
                     });
 
                     if (hasActiveFilter) {
                         indicator.classList.add('show');
+                        clearButton.classList.add('show');
                     } else {
                         indicator.classList.remove('show');
+                        clearButton.classList.remove('show');
                     }
                 }
             });
+        }
+
+        function clearFilter(filterIds) {
+            const currentScrollTop = tableWrapper.scrollTop;
+
+            filterIds.forEach(filterId => {
+                const input = document.getElementById(filterId);
+                if (input) {
+                    input.value = '';
+                }
+            });
+
+            applyFilters();
+            updateFilterIndicator();
+
+            // Restore scroll position
+            tableWrapper.scrollTop = currentScrollTop;
         }
 
         const headerRow = document.querySelector('.header-row');
@@ -1655,17 +1334,26 @@
         });
 
         document.querySelectorAll('.filter-indicator').forEach(indicator => {
-            indicator.addEventListener('click', function () {
+            indicator.addEventListener('click', function (e) {
+                e.stopPropagation();
+
                 filterRow.classList.remove('hidden');
-                tableWrapper.scrollTo({
-                    top: 0,
-                    behavior: 'smooth'
-                });
+                headerRow.classList.remove('filters-hidden');
+                headerRow.classList.add('filters-visible');
+            });
+        });
+
+        // Add click handlers for clear buttons
+        FILTER_CONFIG.forEach(config => {
+            document.getElementById(config.clear).addEventListener('click', function (e) {
+                e.stopPropagation();
+                clearFilter(config.filterIds);
             });
         });
 
         // Update indicator when filters change
-        ['filter-time', 'filter-team1', 'filter-score1', 'filter-score2', 'filter-team2', 'filter-type', 'filter-action'].forEach(id => {
+        const allFilterIds = FILTER_CONFIG.flatMap(config => config.filterIds);
+        allFilterIds.forEach(id => {
             document.getElementById(id).addEventListener('input', function () {
                 applyFilters();
                 updateFilterIndicator();
@@ -1700,7 +1388,12 @@
 
         // Add event listener for time toggle
         document.getElementById('time-toggle').addEventListener('change', function () {
-            isMatchTimeMode = !this.checked; // unchecked = Match Time, checked = Bout Time
+            // isMatchTimeMode = !this.checked; // unchecked = Match Time, checked = Bout Time
+            initChart();
+        });
+
+        // Add event listener for fencer toggle
+        document.getElementById('fencer-toggle').addEventListener('change', function () {
             initChart();
         });
 

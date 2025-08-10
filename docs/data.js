@@ -1,5 +1,15 @@
-const TEAMS = {
+window.TEAMS = {
+    id: "534f2d8f-f7bc-42e7-890c-348fb2d3e9ed",
     title: "JAP vs SUI - 2025 Monal Team Épée Men Final",
+    event: "Challenge Monal 2025",
+    weapon: "épée",
+    gender: "men",
+    category: "senior",
+    event: "team",
+    match: "T2",
+    location: "Saint-Maur-des-Fossés, France",
+    date: "2025.05.25",
+    time: "12:00",
     team1: {
         name: "Switzerland", 
         code: "SUI",
@@ -7,10 +17,11 @@ const TEAMS = {
     team2: {
         name: "Japan",
         code: "JAP", 
-    }
+    },
+    ytlink: "https://youtu.be/IpekOpvrhqE?t="
 };
 
-const matchData = [
+window.matchData = [
             // Match start (0-0)
             { linkTime: "1:24:29", time: "1:24:33", bout: 1, boutTime: "3:00", team1Player: "Alexis Bayard", team1Score: 0, team2Score: 0, team2Player: "Koki Kano", action: "Match begins.", isMatchStart: true },
             // Initial bout: Bayard (SUI) vs Kano (JAP)
@@ -115,8 +126,11 @@ const matchData = [
             { linkTime: "2:23:45", time: "2:23:46", bout: 9, boutTime: "0:04", team1Player: "Ian Hauri", team1Score: 36, team2Score: 36, team2Player: "Koki Kano", type: "R", action: "Kano parade riposte." },
 
             // Bout end, sudden death
-            { linkTime: "2:24:18", time: "2:24:18", bout: 9, boutTime: "0:00", team1Player: "Ian Hauri", team1Score: 36, team1PlayerScore: 11, team2PlayerScore: 10, team2Score: 36, team2Player: "Koki Kano", action: "Morte subite, Kano priorité.", isFencerChange: true, changeDuration: 0.483 },
+            { linkTime: "2:24:18", time: "2:24:18", bout: 9, boutTime: "0:00", team1Player: "Ian Hauri", team1Score: 36, team1PlayerScore: 11, team2PlayerScore: 10, team2Score: 36, team2Player: "Koki Kano", action: "Bout end. Morte subite, Kano priorité.", isFencerChange: true, changeDuration: 0.483, isSudden: true },
 
             // Sudden death
-            { linkTime: "2:25:19", time: "2:25:20", bout: 10, boutTime: "0:48", team1Player: "Ian Hauri", team1Score: 36, team2Score: 37, team2Player: "Koki Kano", type: "F", action: "Kano fleche", isSuddenDeath: true }
+            { linkTime: "2:25:19", time: "2:25:20", bout: 10, boutTime: "0:48", team1Player: "Ian Hauri", team1Score: 36, team2Score: 37, team2Player: "Koki Kano", type: "F", action: "Kano fleche", isSuddenDeath: true },
+
+            // Match end
+            { linkTime: "2:25:19", time: "2:25:20", bout: 10, boutTime: "0:48", team1Player: "Ian Hauri", team1Score: 36, team2Score: 37, team2Player: "Koki Kano", isEnd: true }
         ];
